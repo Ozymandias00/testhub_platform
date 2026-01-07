@@ -1,4 +1,4 @@
-# https://newpanjing.github.io/simpleui_docs/
+# https://newpanjing.github.io/simpleui_docs/config.html#%E5%9B%BE%E6%A0%87%E8%AF%B4%E6%98%8E
 
 from pathlib import Path
 from decouple import config
@@ -233,8 +233,8 @@ SPECTACULAR_SETTINGS = {
 }
 
 # Celery Configuration
-CELERY_BROKER_URL = config('REDIS_URL', default='redis://:123456@127.0.0.1:6379/0')
-CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://:123456@127.0.0.1:6379/0')
+CELERY_BROKER_URL = config('REDIS_URL', default='redis://:1234@127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://:1234@127.0.0.1:6379/0')
 
 # Email Configuration
 EMAIL_BACKEND = 'apps.api_testing.custom_email_backend.CustomEmailBackend'
@@ -297,11 +297,11 @@ SIMPLEUI_DEFAULT_ICON = True
 # 是否关闭登录页粒子效果
 SIMPLEUI_LOGIN_PARTICLES = True
 # 后台管理首页，可以是url或者html文件
-SIMPLEUI_HOME_PAGE = 'https://www.baidu.com/'  # 后面可以扩展为大屏显示做统计
+# SIMPLEUI_HOME_PAGE = 'https://www.baidu.com/'  # 后面可以扩展为大屏显示做统计
 # 自定义首页标题
-SIMPLEUI_HOME_TITLE = 'Dashboard'
-# 自定义首页图标 首页图标,支持element-ui和fontawesome的图标，参考https://fontawesome.com/icons图标
-SIMPLEUI_HOME_ICON = 'fa fa-gauge'
+# SIMPLEUI_HOME_TITLE = 'Dashboard'
+# # 自定义首页图标 首页图标,支持element-ui和fontawesome的图标，参考https://fontawesome.com/icons图标
+# SIMPLEUI_HOME_ICON = 'fa fa-gauge'
 # 设置simpleui 点击首页图标跳转的地址
 SIMPLEUI_INDEX = 'http://localhost:3000'
 # 自定义后台的Logo
@@ -318,3 +318,46 @@ SIMPLEUI_ANALYSIS = False
 SIMPLEUI_STATIC_OFFLINE = True
 # True或None 默认显示加载遮罩层，指定为False 不显示遮罩层。默认显示
 SIMPLEUI_LOADING = True
+# 设置菜单icon，参考https://element.eleme.cn/#/zh-CN/component/icon
+SIMPLEUI_ICON = {
+    # 一级菜单项
+    '测试执行管理': 'el-icon-s-tools',
+    '用户管理': 'el-icon-user-solid',
+    '令牌黑名单': 'el-icon-warning-outline',
+    '接口测试': 'el-icon-s-platform',
+    '智能助手': 'el-icon-chat-dot-round',
+    '用例评审管理': 'el-icon-edit-outline',
+    '认证令牌': 'el-icon-key',
+    '认证和授权': 'el-icon-s-check',
+    '需求分析': 'el-icon-notebook-2',
+
+    # 二级菜单项
+    '测试执行': 'el-icon-s-operation',
+    '测试执行历史': 'el-icon-time',
+    '测试执行用例': 'el-icon-document',
+    '测试计划': 'el-icon-document-checked',
+    '用户': 'el-icon-user',
+    '用户配置': 'el-icon-setting',
+    'Blacklisted Tokens': 'el-icon-warning-outline',
+    'Outstanding Tokens': 'el-icon-s-custom',
+    'API请求': 'el-icon-s-promotion',
+    'API集合': 'el-icon-s-grid',
+    'API项目': 'el-icon-s-custom',
+    '任务执行日志': 'el-icon-s-data',
+    '定时任务': 'el-icon-time',
+    '测试套件': 'el-icon-suitcase',
+    '环境变量': 'el-icon-school',
+    '请求历史': 'el-icon-odometer',
+    '智能助手会话': 'el-icon-chat-dot-round',
+    '智能助手消息': 'el-icon-message',
+    '测试用例评审': 'el-icon-check',
+    '评审分配': 'el-icon-guide',
+    '评审意见': 'el-icon-s-custom',
+    '评审模板': 'el-icon-document',
+    'Tokens': 'el-icon-key',
+    '组': 'el-icon-s-custom',
+    '业务需求': 'el-icon-document-checked',
+    '分析任务': 'el-icon-stopwatch',
+    '生成的测试用例': 'el-icon-document',
+    '需求文档': 'el-icon-document',
+}
