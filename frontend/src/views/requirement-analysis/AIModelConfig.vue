@@ -1,7 +1,7 @@
 <template>
   <div class="ai-model-config">
     <div class="page-header">
-      <h1>🤖 AI模型配置</h1>
+      <h1>🤖 AI用例生成模型配置</h1>
       <p>配置用于测试用例生成和评审的AI模型</p>
     </div>
 
@@ -116,11 +116,11 @@
 
             <div class="form-group">
               <label>模型类型 <span class="required">*</span></label>
-              <select 
-                v-model="configForm.model_type" 
-                class="form-select" 
+              <select
+                v-model="configForm.model_type"
+                class="form-select"
                 required
-                @change="console.log('Model type changed to:', configForm.model_type)">
+                @change="onModelTypeChange(configForm.model_type)">
                 <option value="">请选择模型类型</option>
                 <option value="deepseek">DeepSeek</option>
                 <option value="qwen">通义千问</option>
@@ -158,22 +158,28 @@
 
             <div class="form-group">
               <label>API Base URL <span class="required">*</span></label>
-              <input 
-                v-model="configForm.base_url" 
-                type="url" 
+              <input
+                v-model="configForm.base_url"
+                type="url"
                 class="form-input"
-                placeholder="例如：https://api.deepseek.com/v1"
+                placeholder="选择模型类型后将自动填充，也可手动修改"
                 required>
+              <small class="form-hint">
+                选择模型类型后会自动填充对应的API地址，您可以根据需要修改
+              </small>
             </div>
 
             <div class="form-group">
               <label>模型名称 <span class="required">*</span></label>
-              <input 
-                v-model="configForm.model_name" 
-                type="text" 
+              <input
+                v-model="configForm.model_name"
+                type="text"
                 class="form-input"
-                placeholder="例如：deepseek-chat"
+                placeholder="选择模型类型后将自动填充推荐模型，也可手动修改"
                 required>
+              <small class="form-hint">
+                选择模型类型后会自动填充推荐模型名称，您可以根据需要修改
+              </small>
             </div>
 
             <div class="form-row">
@@ -294,6 +300,13 @@ export default {
         top_p: 0.9,
         is_active: true
       },
+      // 模型类型与API Base URL的映射关系
+      modelBaseUrlMap: {
+        deepseek: 'https://api.deepseek.com',
+        qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        siliconflow: 'https://api.siliconflow.cn/v1',
+        other: ''
+      },
       testResult: {
         success: false,
         message: '',
@@ -338,6 +351,26 @@ export default {
   },
 
   methods: {
+    // 当模型类型改变时自动填充API Base URL
+    onModelTypeChange(modelType) {
+      console.log('Model type changed to:', modelType)
+
+      // 根据选择的模型类型自动填充base_url
+      if (this.modelBaseUrlMap[modelType]) {
+        this.configForm.base_url = this.modelBaseUrlMap[modelType]
+        console.log('Auto-filled base_url:', this.configForm.base_url)
+      }
+
+      // 根据模型类型自动填充模型名称建议
+      if (modelType === 'deepseek' && !this.configForm.model_name) {
+        this.configForm.model_name = 'deepseek-chat'
+      } else if (modelType === 'qwen' && !this.configForm.model_name) {
+        this.configForm.model_name = 'qwen-plus'
+      } else if (modelType === 'siliconflow' && !this.configForm.model_name) {
+        this.configForm.model_name = 'Qwen/Qwen2.5-7B-Instruct'
+      }
+    },
+
     initializeComponent() {
       // 强制重置所有状态
       this.showAddModal = false

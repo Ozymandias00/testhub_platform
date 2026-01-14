@@ -285,4 +285,135 @@ onMounted(() => {
   display: flex;
   justify-content: center;
 }
+
+@media screen and (max-width: 1920px) {
+  .filter-bar {
+    margin-bottom: 18px;
+  }
+  
+  .pagination-container {
+    margin-top: 18px;
+  }
+}
+
+@media screen and (max-width: 1600px) {
+  .filter-bar {
+    margin-bottom: 16px;
+  }
+  
+  .pagination-container {
+    margin-top: 16px;
+  }
+}
+
+@media screen and (max-width: 1440px) {
+  .filter-bar {
+    margin-bottom: 14px;
+  }
+  
+  .pagination-container {
+    margin-top: 14px;
+  }
+}
+
+@media screen and (max-width: 1366px) {
+  .filter-bar {
+    margin-bottom: 12px;
+  }
+  
+  .pagination-container {
+    margin-top: 12px;
+  }
+}
+
+@media screen and (max-width: 1280px) {
+  .filter-bar {
+    margin-bottom: 12px;
+  }
+  
+  .pagination-container {
+    margin-top: 12px;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .filter-bar {
+    margin-bottom: 10px;
+    
+    :deep(.el-row) {
+      flex-direction: column;
+      
+      .el-col {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+    }
+  }
+  
+  .pagination-container {
+    margin-top: 10px;
+    
+    :deep(.el-pagination) {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .filter-bar {
+    margin-bottom: 8px;
+  }
+  
+  .pagination-container {
+    margin-top: 8px;
+    
+    :deep(.el-pagination) {
+      :deep(.el-pagination__sizes),
+      :deep(.el-pagination__jump) {
+        display: none;
+      }
+    }
+  }
+  
+  :deep(.el-dialog) {
+    width: 95% !important;
+    margin: 0 auto;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .page-header {
+    :deep(.el-button) {
+      width: 100%;
+    }
+  }
+  
+  .filter-bar {
+    margin-bottom: 6px;
+  }
+  
+  .pagination-container {
+    margin-top: 6px;
+  }
+  
+  :deep(.el-table) {
+    font-size: 12px;
+    
+    .el-button {
+      padding: 5px 8px;
+      font-size: 12px;
+    }
+  }
+  
+  :deep(.el-dialog) {
+    width: 98% !important;
+  }
+}
 </style>

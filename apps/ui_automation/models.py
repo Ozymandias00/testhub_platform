@@ -861,58 +861,6 @@ class UiScheduledTask(models.Model):
         return timezone.now() >= self.next_run_time
 
 
-class UiNotificationConfig(models.Model):
-    """UI自动化通知配置模型"""
-
-    CONFIG_TYPE_CHOICES = [
-        ('webhook_feishu', '飞书机器人'),
-        ('webhook_wechat', '企业微信机器人'),
-        ('webhook_dingtalk', '钉钉机器人'),
-    ]
-
-    name = models.CharField(max_length=100, verbose_name='配置名称', help_text='用于标识该通知配置的名称')
-    config_type = models.CharField(max_length=20, choices=CONFIG_TYPE_CHOICES, default='webhook_feishu',
-                                   verbose_name='配置类型')
-    webhook_bots = models.JSONField(default=dict, blank=True, null=True, verbose_name='Webhook机器人配置',
-                                    help_text='飞书、企业微信、钉钉机器人配置')
-    is_default = models.BooleanField(default=False, verbose_name='是否默认配置')
-    is_active = models.BooleanField(default=True, verbose_name='是否启用')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='创建者')
-
-    class Meta:
-        db_table = 'ui_notification_configs'
-        verbose_name = 'UI通知配置'
-        verbose_name_plural = 'UI通知配置'
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['config_type']),
-            models.Index(fields=['is_default']),
-            models.Index(fields=['created_by']),
-        ]
-
-    def __str__(self):
-        return f"{self.name} - {self.get_config_type_display()}"
-
-    def get_webhook_bots(self):
-        """获取配置的所有webhook机器人"""
-        bots = []
-        if self.webhook_bots:
-            for bot_type, bot_config in self.webhook_bots.items():
-                bot_data = {
-                    'type': bot_type,
-                    'name': bot_config.get('name', f'{bot_type}机器人'),
-                    'webhook_url': bot_config.get('webhook_url'),
-                    'enabled': bot_config.get('enabled', True)
-                }
-                # 钉钉机器人需要额外包含secret字段
-                if bot_type == 'dingtalk' and bot_config.get('secret'):
-                    bot_data['secret'] = bot_config.get('secret')
-                bots.append(bot_data)
-        return bots
-
-
 class UiNotificationLog(models.Model):
     """UI自动化通知日志模型"""
     NOTIFICATION_TYPES = [
@@ -933,6 +881,7 @@ class UiNotificationLog(models.Model):
 
     task = models.ForeignKey(UiScheduledTask, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='关联任务')
     task_name = models.CharField(max_length=200, verbose_name='任务名称', help_text='相关任务的名称')
+    task_type = models.CharField(max_length=20, blank=True, null=True, verbose_name='任务类型快照', help_text='发送通知时的任务类型')
     notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPES, verbose_name='通知类型')
     sender_name = models.CharField(max_length=100, verbose_name='发件人姓名')
     sender_email = models.EmailField(verbose_name='发件人邮箱')
@@ -1008,8 +957,9 @@ class UiTaskNotificationSetting(models.Model):
                              verbose_name='关联任务')
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='webhook',
                                          verbose_name='通知类型')
-    notification_config = models.ForeignKey(UiNotificationConfig, on_delete=models.SET_NULL, null=True, blank=True,
-                                            related_name='notification_config', verbose_name='通知配置')
+    notification_config = models.ForeignKey('core.UnifiedNotificationConfig', on_delete=models.SET_NULL,
+                                            null=True, blank=True, related_name='ui_task_notification_settings',
+                                            verbose_name='通知配置')
     is_enabled = models.BooleanField(default=False, verbose_name='是否启用通知')
     notify_on_success = models.BooleanField(default=True, verbose_name='成功时通知')
     notify_on_failure = models.BooleanField(default=True, verbose_name='失败时通知')
@@ -1047,12 +997,14 @@ class UiTaskNotificationSetting(models.Model):
         if self.notification_config:
             return self.notification_config
         # 如果没有指定配置，使用默认配置
-        return UiNotificationConfig.objects.filter(is_default=True, is_active=True).first()
+        # 使用字符串引用避免循环导入
+        from apps.core.models import UnifiedNotificationConfig
+        return UnifiedNotificationConfig.objects.filter(is_default=True, is_active=True).first()
 
 
 class AICase(models.Model):
     """AI测试用例"""
-    project = models.ForeignKey(UiProject, on_delete=models.CASCADE, verbose_name='所属项目')
+    project = models.ForeignKey(UiProject, on_delete=models.CASCADE, null=True, blank=True, verbose_name='所属项目')
     name = models.CharField(max_length=200, verbose_name='用例名称')
     description = models.TextField(blank=True, null=True, verbose_name='描述')
     task_description = models.TextField(verbose_name='任务描述', help_text='自然语言任务描述')
@@ -1079,7 +1031,7 @@ class AIExecutionRecord(models.Model):
         ('failed', '失败'),
     ]
 
-    project = models.ForeignKey(UiProject, on_delete=models.CASCADE, verbose_name='所属项目')
+    project = models.ForeignKey(UiProject, on_delete=models.CASCADE, null=True, blank=True, verbose_name='所属项目')
     ai_case = models.ForeignKey(AICase, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='关联AI用例')
     case_name = models.CharField(max_length=200, verbose_name='用例名称快照')
     task_description = models.TextField(blank=True, default='', verbose_name='任务描述', help_text='用户输入的原始任务描述')

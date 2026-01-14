@@ -5,7 +5,7 @@ from .models import (
     TestSuiteScript, TestSuiteTestCase, TestExecution, TestEnvironment, Screenshot,
     ElementGroup, PageObject, PageObjectElement, ScriptStep, ScriptElementUsage,
     TestCase, TestCaseStep, TestCaseExecution, OperationRecord,
-    UiScheduledTask, UiNotificationConfig, UiNotificationLog, UiTaskNotificationSetting,
+    UiScheduledTask, UiNotificationLog, UiTaskNotificationSetting,
     AICase, AIExecutionRecord
 )
 from django.contrib.auth import get_user_model
@@ -703,7 +703,8 @@ class UiScheduledTaskSerializer(serializers.ModelSerializer):
 
         # 创建对应的通知设置（如果启用了通知）
         if instance.notify_on_success or instance.notify_on_failure:
-            from .models import UiTaskNotificationSetting, UiNotificationConfig
+            from .models import UiTaskNotificationSetting
+            from apps.core.models import UnifiedNotificationConfig
 
             # 确定通知类型（默认为webhook）
             notification_type = validated_data.get('notification_type', 'webhook')
@@ -712,14 +713,14 @@ class UiScheduledTaskSerializer(serializers.ModelSerializer):
             notification_config = None
             if notification_type in ['webhook', 'both']:
                 # 如果需要Webhook通知，优先选择Webhook配置
-                notification_config = UiNotificationConfig.objects.filter(
+                notification_config = UnifiedNotificationConfig.objects.filter(
                     config_type__in=['webhook_wechat', 'webhook_feishu', 'webhook_dingtalk'],
                     is_active=True
                 ).first()
 
             if not notification_config:
                 # 如果没有找到webhook配置或者是邮件通知，使用默认配置
-                notification_config = UiNotificationConfig.objects.filter(
+                notification_config = UnifiedNotificationConfig.objects.filter(
                     is_default=True,
                     is_active=True
                 ).first()
@@ -747,7 +748,8 @@ class UiScheduledTaskSerializer(serializers.ModelSerializer):
 
         # 更新通知设置
         if instance.notify_on_success or instance.notify_on_failure:
-            from .models import UiTaskNotificationSetting, UiNotificationConfig
+            from .models import UiTaskNotificationSetting
+            from apps.core.models import UnifiedNotificationConfig
 
             # 确定通知类型（默认为webhook）
             notification_type = validated_data.get('notification_type', 'webhook')
@@ -756,14 +758,14 @@ class UiScheduledTaskSerializer(serializers.ModelSerializer):
             notification_config = None
             if notification_type in ['webhook', 'both']:
                 # 如果需要Webhook通知，优先选择Webhook配置
-                notification_config = UiNotificationConfig.objects.filter(
+                notification_config = UnifiedNotificationConfig.objects.filter(
                     config_type__in=['webhook_wechat', 'webhook_feishu', 'webhook_dingtalk'],
                     is_active=True
                 ).first()
 
             if not notification_config:
                 # 如果没有找到webhook配置或者是邮件通知，使用默认配置
-                notification_config = UiNotificationConfig.objects.filter(
+                notification_config = UnifiedNotificationConfig.objects.filter(
                     is_default=True,
                     is_active=True
                 ).first()
@@ -833,33 +835,6 @@ class AIExecutionRecordSerializer(serializers.ModelSerializer):
         read_only_fields = ('start_time', 'end_time', 'duration', 'executed_by', 'gif_path', 'screenshots_sequence')
 
 
-class UiNotificationConfigSerializer(serializers.ModelSerializer):
-    """UI通知配置序列化器"""
-    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
-    webhook_bots_display = serializers.SerializerMethodField()
-    config_type_display = serializers.CharField(source='get_config_type_display', read_only=True)
-
-    class Meta:
-        model = UiNotificationConfig
-        fields = [
-            'id', 'name', 'config_type', 'config_type_display',
-            'webhook_bots', 'webhook_bots_display', 'is_default',
-            'is_active', 'created_by', 'created_by_name',
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = ['created_at', 'updated_at', 'created_by']
-
-    def get_webhook_bots_display(self, obj):
-        """获取webhook机器人显示信息"""
-        bots = obj.get_webhook_bots()
-        return f"{len(bots)} 个机器人配置" if bots else "未配置"
-
-    def create(self, validated_data):
-        """创建时自动设置创建者"""
-        validated_data['created_by'] = self.context['request'].user
-        instance = super().create(validated_data)
-        return instance
-
 
 class UiNotificationLogSerializer(serializers.ModelSerializer):
     """UI通知日志序列化器"""
@@ -891,11 +866,13 @@ class UiNotificationLogSerializer(serializers.ModelSerializer):
         return obj.get_retry_status()
 
     def get_task_type_display(self, obj):
-        """获取任务类型显示"""
-        if obj.task:
+        """获取任务类型显示 - 使用保存的快照值"""
+        if obj.task_type:
+            # 使用保存的任务类型快照
             task_type_choices = dict(UiScheduledTask.TASK_TYPE_CHOICES)
-            return task_type_choices.get(obj.task.task_type, obj.task.task_type)
-        return '-'
+            return task_type_choices.get(obj.task_type, obj.task_type)
+        # 如果 task_type 为空，返回未记录，不要从 task 对象获取（避免显示修改后的值）
+        return '未记录'
 
     def get_actual_notification_type_display(self, obj):
         """获取实际的通知类型显示 - 根据实际发送的通知来判断"""

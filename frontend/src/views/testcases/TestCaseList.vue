@@ -388,7 +388,7 @@ const exportToExcel = async () => {
         testcase.title || '',
         testcase.project?.name || '',
         versions,
-        testcase.preconditions || '',
+        convertBrToNewline(testcase.preconditions || ''),
         convertBrToNewline(testcase.steps || ''),
         convertBrToNewline(testcase.expected_result || ''),
         getPriorityText(testcase.priority),

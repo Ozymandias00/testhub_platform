@@ -21,7 +21,7 @@ from .models import (
     ElementGroup, PageObject, PageObjectElement, ScriptStep, ScriptElementUsage,
     TestCase, TestCaseStep, TestCaseExecution, OperationRecord,
     TestCase, TestCaseStep, TestCaseExecution, OperationRecord,
-    UiScheduledTask, UiNotificationConfig, UiNotificationLog, UiTaskNotificationSetting,
+    UiScheduledTask, UiNotificationLog, UiTaskNotificationSetting,
     AICase, AIExecutionRecord
 )
 from .serializers import (
@@ -39,7 +39,7 @@ from .serializers import (
     ScriptAnalysisSerializer, ElementValidationSerializer, CodeGenerationSerializer,
     TestCaseSerializer, TestCaseStepSerializer, TestCaseExecutionSerializer, TestCaseRunSerializer,
     OperationRecordSerializer,
-    UiScheduledTaskSerializer, UiNotificationConfigSerializer, UiNotificationLogSerializer, UiTaskNotificationSettingSerializer,
+    UiScheduledTaskSerializer, UiNotificationLogSerializer, UiTaskNotificationSettingSerializer,
     AICaseSerializer, AIExecutionRecordSerializer
 )
 from .operation_logger import log_operation
@@ -1964,7 +1964,10 @@ class OperationRecordViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         # 返回最近的操作记录，按创建时间倒序
-        queryset = OperationRecord.objects.all().order_by('-created_at')
+        # 过滤掉AI智能模式相关的操作记录
+        queryset = OperationRecord.objects.exclude(
+            resource_type__in=['ai_case', 'ai_execution']
+        ).order_by('-created_at')
 
         # 支持通过查询参数限制返回数量
         limit = self.request.query_params.get('limit', None)
@@ -2499,19 +2502,34 @@ class UiScheduledTaskViewSet(viewsets.ModelViewSet):
 
             logger.info("=== 开始发送Webhook通知 ===")
 
-            # 获取所有启用的webhook配置
-            all_webhook_configs = UiNotificationConfig.objects.filter(
-                config_type__in=['webhook_wechat', 'webhook_feishu', 'webhook_dingtalk'],
-                is_active=True
-            )
+            # 使用统一的通知配置
+            try:
+                from apps.core.models import UnifiedNotificationConfig
+                all_webhook_configs = UnifiedNotificationConfig.objects.filter(
+                    config_type__in=['webhook_wechat', 'webhook_feishu', 'webhook_dingtalk'],
+                    is_active=True
+                )
+                logger.info("使用统一通知配置 (UnifiedNotificationConfig)")
+            except ImportError as e:
+                # 如果 core 模块不可用，记录错误并返回
+                logger.error(f"无法导入统一通知配置: {e}")
+                logger.warning("通知发送失败：无法找到通知配置模块")
+                return
+            except Exception as e:
+                logger.error(f"获取通知配置时出错: {e}")
+                return
 
             all_webhook_bots = []
             for config in all_webhook_configs:
                 bots = config.get_webhook_bots()
                 if bots:
                     for bot in bots:
-                        if bot.get('enabled', True):
+                        # 只添加启用了"UI自动化测试"的机器人
+                        if bot.get('enabled', True) and bot.get('enable_ui_automation', True):
                             all_webhook_bots.append(bot)
+                            logger.info(f"添加机器人: {bot.get('name')} (UI自动化测试已启用)")
+                        elif bot.get('enabled', True):
+                            logger.info(f"配置中心机器人 {bot.get('name')} 未启用UI自动化测试，跳过")
 
             if not all_webhook_bots:
                 logger.warning("没有找到任何启用的webhook机器人配置")
@@ -2648,6 +2666,7 @@ class UiScheduledTaskViewSet(viewsets.ModelViewSet):
                         UiNotificationLog.objects.create(
                             task=task,
                             task_name=task.name,
+                            task_type=task.task_type,
                             notification_type='task_execution',
                             sender_name='系统Webhook通知',
                             sender_email='system@notification.com',
@@ -2665,6 +2684,7 @@ class UiScheduledTaskViewSet(viewsets.ModelViewSet):
                         UiNotificationLog.objects.create(
                             task=task,
                             task_name=task.name,
+                            task_type=task.task_type,
                             notification_type='task_execution',
                             sender_name='系统Webhook通知',
                             sender_email='system@notification.com',
@@ -2683,6 +2703,7 @@ class UiScheduledTaskViewSet(viewsets.ModelViewSet):
                     UiNotificationLog.objects.create(
                         task=task,
                         task_name=task.name,
+                        task_type=task.task_type,
                         notification_type='task_execution',
                         sender_name='系统Webhook通知',
                         sender_email='system@notification.com',
@@ -2760,6 +2781,7 @@ class UiScheduledTaskViewSet(viewsets.ModelViewSet):
             UiNotificationLog.objects.create(
                 task=task,
                 task_name=task.name,
+                task_type=task.task_type,
                 notification_type='task_execution',
                 sender_name='系统邮件通知',
                 sender_email=from_email,
@@ -2777,6 +2799,7 @@ class UiScheduledTaskViewSet(viewsets.ModelViewSet):
                 UiNotificationLog.objects.create(
                     task=task,
                     task_name=task.name,
+                    task_type=task.task_type,
                     notification_type='task_execution',
                     sender_name='系统邮件通知',
                     sender_email=settings.DEFAULT_FROM_EMAIL,
@@ -2787,41 +2810,6 @@ class UiScheduledTaskViewSet(viewsets.ModelViewSet):
                 )
             except:
                 pass
-
-
-class UiNotificationConfigViewSet(viewsets.ModelViewSet):
-    """UI通知配置视图集"""
-    queryset = UiNotificationConfig.objects.all()
-    serializer_class = UiNotificationConfigSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['config_type', 'is_default', 'is_active']
-    search_fields = ['name']
-    ordering_fields = ['created_at']
-    ordering = ['-created_at']
-
-    def perform_create(self, serializer):
-        """创建通知配置"""
-        instance = serializer.save()
-
-    def perform_update(self, serializer):
-        """更新通知配置"""
-        instance = serializer.save()
-
-    def perform_destroy(self, instance):
-        """删除通知配置"""
-        instance.delete()
-
-    @action(detail=True, methods=['post'])
-    def set_default(self, request, pk=None):
-        """设置为默认配置"""
-        config = self.get_object()
-        # 取消其他默认配置
-        UiNotificationConfig.objects.filter(is_default=True).update(is_default=False)
-        # 设置当前为默认
-        config.is_default = True
-        config.save()
-        return Response({'message': '已设置为默认配置'})
 
 
 class UiNotificationLogViewSet(viewsets.ReadOnlyModelViewSet):
@@ -2871,18 +2859,18 @@ class AICaseViewSet(viewsets.ModelViewSet):
         accessible_projects = UiProject.objects.filter(
             models.Q(owner=user) | models.Q(members=user)
         ).distinct()
-        return AICase.objects.filter(project__in=accessible_projects)
+        # 返回用户有权限的项目下的AI用例，以及没有关联项目的AI用例
+        return AICase.objects.filter(
+            models.Q(project__in=accessible_projects) | models.Q(project__isnull=True)
+        ).distinct()
 
     def perform_create(self, serializer):
         instance = serializer.save(created_by=self.request.user)
-        log_operation('create', 'ai_case', instance.id, instance.name, self.request.user)
 
     def perform_update(self, serializer):
         instance = serializer.save()
-        log_operation('edit', 'ai_case', instance.id, instance.name, self.request.user)
 
     def perform_destroy(self, instance):
-        log_operation('delete', 'ai_case', instance.id, instance.name, self.request.user)
         instance.delete()
 
     @action(detail=True, methods=['post'])
@@ -3007,6 +2995,81 @@ class AICaseViewSet(viewsets.ModelViewSet):
             'execution_id': execution_record.id
         })
 
+    def _process_gif_recording(self, execution_record, history):
+        """
+        处理GIF录制文件
+        在执行完成后查找生成的GIF文件并保存路径到数据库
+        """
+        try:
+            import os
+            from django.conf import settings
+            from datetime import datetime
+
+            # browser-use 默认生成的GIF文件名（固定为agent_history.gif）
+            default_gif_path = os.path.join(os.getcwd(), 'agent_history.gif')
+
+            # 如果找到GIF文件，移动到media/ai_recording目录并重命名
+            if os.path.exists(default_gif_path):
+                import shutil
+
+                # 创建录制文件目录
+                gif_dir = os.path.join(settings.MEDIA_ROOT, 'ai_recording')
+                os.makedirs(gif_dir, exist_ok=True)
+
+                # 生成新的文件名：用例名称+年月日时分秒
+                timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                # 清理用例名称中的非法字符
+                safe_case_name = "".join([c if c.isalnum() or c in (' ', '_', '-') else '_' for c in execution_record.case_name])
+                new_gif_filename = f"{safe_case_name}_{timestamp}.gif"
+                new_gif_path = os.path.join(gif_dir, new_gif_filename)
+
+                # 移动并重命名文件
+                shutil.move(default_gif_path, new_gif_path)
+
+                # 保存相对路径到数据库
+                relative_path = os.path.join('media', 'ai_recording', new_gif_filename)
+                execution_record.gif_path = relative_path
+
+                logger.info(f"✅ GIF recording saved to: {relative_path}")
+            else:
+                logger.warning(f"⚠️ GIF file not found at: {default_gif_path}")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to process GIF recording: {e}")
+
+    def _auto_mark_completed_tasks(self, execution_record):
+        """
+        自动标记已完成的任务
+        通过分析执行历史和当前任务状态，自动标记那些已经执行但未被标记完成的任务
+        """
+        try:
+            # 记录初始状态
+            initial_completed = 0
+            initial_pending = 0
+            if execution_record.planned_tasks:
+                initial_completed = len([t for t in execution_record.planned_tasks if t.get('status') == 'completed'])
+                initial_pending = len([t for t in execution_record.planned_tasks if t.get('status') == 'pending'])
+                logger.info(f"📊 Before auto-mark: {initial_completed} completed, {initial_pending} pending tasks")
+
+            # 如果执行成功，标记所有任务为完成
+            if execution_record.status == 'passed' and execution_record.planned_tasks:
+                auto_marked_count = 0
+                for task in execution_record.planned_tasks:
+                    # 只对标记为pending的任务进行处理
+                    if task.get('status') == 'pending':
+                        task['status'] = 'completed'
+                        auto_marked_count += 1
+                        logger.info(f"🔒 Auto-marked task {task['id']} as completed")
+
+                if auto_marked_count > 0:
+                    logger.info(f"✨ Auto-marked {auto_marked_count} tasks as completed")
+                else:
+                    logger.info("📋 No pending tasks needed auto-marking")
+
+            # TODO: 可以添加更智能的分析逻辑来识别部分完成的任务
+
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to auto-mark completed tasks: {e}")
+
 
 # 全局停止信号字典 {execution_id: bool}
 STOP_SIGNALS = {}
@@ -3025,12 +3088,12 @@ class AIExecutionRecordViewSet(viewsets.ModelViewSet):
         accessible_projects = UiProject.objects.filter(
             models.Q(owner=user) | models.Q(members=user)
         ).distinct()
-        return AIExecutionRecord.objects.filter(project__in=accessible_projects)
+        # 返回用户有权限的项目下的执行记录，以及没有关联项目的执行记录
+        return AIExecutionRecord.objects.filter(
+            models.Q(project__in=accessible_projects) | models.Q(project__isnull=True)
+        ).distinct()
 
     def perform_destroy(self, instance):
-        # 记录操作（在删除前记录）
-        name = instance.case_name if instance.case_name else f"AI执行记录#{instance.id}"
-        log_operation('delete', 'ai_execution', instance.id, name, self.request.user)
         instance.delete()
 
     @action(detail=False, methods=['post'])
@@ -3054,13 +3117,16 @@ class AIExecutionRecordViewSet(viewsets.ModelViewSet):
         execution_mode = request.data.get('execution_mode', 'text')  # 默认文本模式
         enable_gif = request.data.get('enable_gif', True)  # GIF录制开关，默认开启
 
-        if not project_id or not task_description:
-            return Response({'error': '缺少必要参数'}, status=status.HTTP_400_BAD_REQUEST)
+        if not task_description:
+            return Response({'error': '缺少任务描述参数'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            project = UiProject.objects.get(id=project_id)
-        except UiProject.DoesNotExist:
-            return Response({'error': '项目不存在'}, status=status.HTTP_404_NOT_FOUND)
+        # 获取项目对象（如果提供了project_id）
+        project = None
+        if project_id:
+            try:
+                project = UiProject.objects.get(id=project_id)
+            except UiProject.DoesNotExist:
+                return Response({'error': '项目不存在'}, status=status.HTTP_404_NOT_FOUND)
 
         # 创建执行记录
         execution_record = AIExecutionRecord.objects.create(

@@ -221,7 +221,8 @@ class AIModelConfig(models.Model):
         db_table = 'ai_model_config'
         verbose_name = 'AI模型配置'
         verbose_name_plural = 'AI模型配置'
-        unique_together = ('model_type', 'role', 'is_active')  # 每种角色只能有一个活跃配置
+        # 移除 unique_together 约束，允许同一个 role 有多个配置
+        # 在应用层面通过代码控制：每个 role 只能有一个 is_active=True 的配置
     
     def __str__(self):
         return f"{self.get_model_type_display()} - {self.get_role_display()}"

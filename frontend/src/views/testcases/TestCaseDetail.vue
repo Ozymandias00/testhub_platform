@@ -36,7 +36,9 @@
         <el-descriptions-item label="作者">{{ testcase.author?.username }}</el-descriptions-item>
         <el-descriptions-item label="创建时间" :span="2">{{ formatDate(testcase.created_at) }}</el-descriptions-item>
         <el-descriptions-item label="用例描述" :span="2">{{ testcase.description || '暂无描述' }}</el-descriptions-item>
-        <el-descriptions-item label="前置条件" :span="2">{{ testcase.preconditions || '无' }}</el-descriptions-item>
+        <el-descriptions-item label="前置条件" :span="2">
+          <div v-html="testcase.preconditions || '无'"></div>
+        </el-descriptions-item>
         <el-descriptions-item label="操作步骤" :span="2">
           <div class="steps-content" v-html="testcase.steps || '无'"></div>
         </el-descriptions-item>

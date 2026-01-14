@@ -9,15 +9,12 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-admin.site.site_title = 'TestHub 管理后台'
-admin.site.site_header = 'TestHub 后台系统'
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-
+    
     path('api/auth/', include('apps.users.urls')),
     path('api/projects/', include('apps.projects.urls')),
     path('api/testcases/', include('apps.testcases.urls')),
@@ -31,6 +28,7 @@ urlpatterns = [
     path('api/requirement-analysis/', include('apps.requirement_analysis.urls')),
     path('api/ui-automation/', include('apps.ui_automation.urls')),
     path('api/', include('apps.api_testing.urls')),
+    path('api/core/', include('apps.core.urls')),
 ]
 
 if settings.DEBUG:

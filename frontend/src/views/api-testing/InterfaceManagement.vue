@@ -887,9 +887,9 @@ const onNodeClick = (data) => {
     }
     
     console.log('onNodeClick - selectedRequest.value.headers:', selectedRequest.value.headers)
-    
+
     // 解析body数据
-    if (data.body) {
+    if (data.body && data.body.type) {
       if (data.body.type === 'json' && data.body.data) {
         bodyType.value = 'raw'
         rawType.value = 'json'
@@ -898,6 +898,14 @@ const onNodeClick = (data) => {
         bodyType.value = 'raw'
         rawType.value = 'text'
         rawBody.value = data.body.data
+      } else if (data.body.type === 'form-data') {
+        bodyType.value = 'form-data'
+        formData.value = data.body.data || {}
+      } else if (data.body.type === 'x-www-form-urlencoded') {
+        bodyType.value = 'x-www-form-urlencoded'
+        formUrlEncoded.value = data.body.data || {}
+      } else if (data.body.type === 'binary') {
+        bodyType.value = 'binary'
       } else {
         bodyType.value = 'none'
         rawBody.value = ''
@@ -1054,9 +1062,9 @@ const editNode = () => {
     }
     
     console.log('editNode - selectedRequest.value.headers:', selectedRequest.value.headers)
-    
+
     // 解析body数据
-    if (data.body) {
+    if (data.body && data.body.type) {
       if (data.body.type === 'json' && data.body.data) {
         bodyType.value = 'raw'
         rawType.value = 'json'
@@ -1065,6 +1073,14 @@ const editNode = () => {
         bodyType.value = 'raw'
         rawType.value = 'text'
         rawBody.value = data.body.data
+      } else if (data.body.type === 'form-data') {
+        bodyType.value = 'form-data'
+        formData.value = data.body.data || {}
+      } else if (data.body.type === 'x-www-form-urlencoded') {
+        bodyType.value = 'x-www-form-urlencoded'
+        formUrlEncoded.value = data.body.data || {}
+      } else if (data.body.type === 'binary') {
+        bodyType.value = 'binary'
       } else {
         bodyType.value = 'none'
         rawBody.value = ''
@@ -1559,11 +1575,13 @@ const sendRequest = async () => {
   try {
     // 发送请求前先自动保存当前的修改
     await saveRequest()
-    
+
     // 准备请求体数据
     let bodyData = {}
     if (hasBody.value) {
-      if (bodyType.value === 'raw' && rawBody.value) {
+      if (bodyType.value === 'none') {
+        bodyData = {}
+      } else if (bodyType.value === 'raw' && rawBody.value) {
         if (rawType.value === 'json') {
           try {
             bodyData = {
@@ -1581,6 +1599,21 @@ const sendRequest = async () => {
             type: 'raw',
             data: rawBody.value
           }
+        }
+      } else if (bodyType.value === 'form-data') {
+        bodyData = {
+          type: 'form-data',
+          data: formData.value || {}
+        }
+      } else if (bodyType.value === 'x-www-form-urlencoded') {
+        bodyData = {
+          type: 'x-www-form-urlencoded',
+          data: formUrlEncoded.value || {}
+        }
+      } else if (bodyType.value === 'binary') {
+        bodyData = {
+          type: 'binary',
+          data: null
         }
       }
     }
@@ -1624,28 +1657,51 @@ const onHeadersUpdate = (newHeaders) => {
 
 const saveRequest = async () => {
   if (!selectedRequest.value) return
-  
+
   saving.value = true
   try {
     // 准备保存的数据
     let bodyData = {}
-    if (hasBody.value && bodyType.value === 'raw' && rawBody.value) {
-      if (rawType.value === 'json') {
-        try {
-          bodyData = {
-            type: 'json',
-            data: JSON.parse(rawBody.value)
+
+    if (hasBody.value) {
+      if (bodyType.value === 'none') {
+        bodyData = {}
+      } else if (bodyType.value === 'raw' && rawBody.value) {
+        if (rawType.value === 'json') {
+          try {
+            bodyData = {
+              type: 'json',
+              data: JSON.parse(rawBody.value)
+            }
+          } catch (e) {
+            bodyData = {
+              type: 'raw',
+              data: rawBody.value
+            }
           }
-        } catch (e) {
+        } else {
           bodyData = {
             type: 'raw',
             data: rawBody.value
           }
         }
-      } else {
+      } else if (bodyType.value === 'form-data') {
+        // 处理 form-data 类型
         bodyData = {
-          type: 'raw',
-          data: rawBody.value
+          type: 'form-data',
+          data: formData.value || {}
+        }
+      } else if (bodyType.value === 'x-www-form-urlencoded') {
+        // 处理 x-www-form-urlencoded 类型
+        bodyData = {
+          type: 'x-www-form-urlencoded',
+          data: formUrlEncoded.value || {}
+        }
+      } else if (bodyType.value === 'binary') {
+        // 处理 binary 类型
+        bodyData = {
+          type: 'binary',
+          data: null
         }
       }
     }

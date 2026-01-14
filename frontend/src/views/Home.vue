@@ -273,4 +273,273 @@ const handleNavigate = (type) => {
 .nav-card:hover .card-icon {
   transform: scale(1.1);
 }
+
+@media screen and (max-width: 1920px) {
+  .main-title {
+    font-size: 3.2rem;
+  }
+  
+  .subtitle {
+    font-size: 1.4rem;
+  }
+  
+  .cards-container {
+    gap: 28px;
+    padding: 18px;
+  }
+}
+
+@media screen and (max-width: 1600px) {
+  .main-title {
+    font-size: 3rem;
+  }
+  
+  .subtitle {
+    font-size: 1.3rem;
+  }
+  
+  .cards-container {
+    gap: 26px;
+    padding: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  }
+  
+  .nav-card {
+    padding: 35px 18px;
+  }
+}
+
+@media screen and (max-width: 1440px) {
+  .main-title {
+    font-size: 2.8rem;
+  }
+  
+  .subtitle {
+    font-size: 1.2rem;
+  }
+  
+  .cards-container {
+    gap: 24px;
+    padding: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  
+  .nav-card {
+    padding: 30px 16px;
+    
+    h3 {
+      font-size: 1.4rem;
+    }
+  }
+  
+  .card-icon {
+    width: 70px;
+    height: 70px;
+    font-size: 35px;
+  }
+}
+
+@media screen and (max-width: 1366px) {
+  .main-title {
+    font-size: 2.6rem;
+  }
+  
+  .subtitle {
+    font-size: 1.1rem;
+  }
+  
+  .cards-container {
+    gap: 22px;
+    padding: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  
+  .nav-card {
+    padding: 28px 14px;
+    
+    h3 {
+      font-size: 1.3rem;
+    }
+  }
+  
+  .card-icon {
+    width: 65px;
+    height: 65px;
+    font-size: 32px;
+  }
+}
+
+@media screen and (max-width: 1280px) {
+  .main-title {
+    font-size: 2.4rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .cards-container {
+    gap: 20px;
+    padding: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  
+  .nav-card {
+    padding: 25px 12px;
+    
+    h3 {
+      font-size: 1.2rem;
+    }
+  }
+  
+  .card-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 30px;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .home-container {
+    padding: 15px;
+  }
+  
+  .main-title {
+    font-size: 2.2rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+    margin-bottom: 3rem;
+  }
+  
+  .cards-container {
+    gap: 18px;
+    padding: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+  
+  .nav-card {
+    padding: 20px 10px;
+    
+    h3 {
+      font-size: 1.1rem;
+    }
+    
+    p {
+      font-size: 0.9rem;
+    }
+  }
+  
+  .card-icon {
+    width: 55px;
+    height: 55px;
+    font-size: 28px;
+  }
+  
+  .header-actions {
+    padding: 8px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .home-container {
+    padding: 10px;
+  }
+  
+  .content-wrapper {
+    max-width: 100%;
+  }
+  
+  .main-title {
+    font-size: 1.8rem;
+    letter-spacing: 1px;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 2rem;
+  }
+  
+  .cards-container {
+    gap: 15px;
+    padding: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+  
+  .nav-card {
+    padding: 18px 8px;
+    border-radius: 12px;
+    
+    h3 {
+      font-size: 1rem;
+      margin: 15px 0 8px;
+    }
+    
+    p {
+      font-size: 0.8rem;
+      line-height: 1.3;
+    }
+  }
+  
+  .card-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+  }
+  
+  .header-actions {
+    padding: 5px;
+    
+    .username {
+      display: none;
+    }
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .home-container {
+    padding: 8px;
+  }
+  
+  .main-title {
+    font-size: 1.5rem;
+  }
+  
+  .subtitle {
+    font-size: 0.8rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .cards-container {
+    gap: 12px;
+    padding: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+  
+  .nav-card {
+    padding: 15px 6px;
+    border-radius: 10px;
+    
+    h3 {
+      font-size: 0.9rem;
+      margin: 12px 0 6px;
+    }
+    
+    p {
+      font-size: 0.75rem;
+      line-height: 1.2;
+    }
+  }
+  
+  .card-icon {
+    width: 45px;
+    height: 45px;
+    font-size: 22px;
+  }
+  
+  .header-actions {
+    padding: 3px;
+  }
+}
 </style>

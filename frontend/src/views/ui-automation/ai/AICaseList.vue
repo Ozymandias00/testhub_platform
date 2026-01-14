@@ -2,9 +2,6 @@
   <div class="page-container">
     <div class="page-header">
       <h1 class="page-title">AI 用例管理</h1>
-      <el-select v-model="projectId" placeholder="选择项目" style="width: 200px; margin-right: 15px" @change="onProjectChange">
-        <el-option v-for="project in projects" :key="project.id" :label="project.name" :value="project.id" />
-      </el-select>
     </div>
 
     <div class="card-container">
@@ -91,17 +88,14 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, VideoPlay, Edit, Delete } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-import { 
-  getUiProjects, 
-  getAICases, 
-  updateAICase, 
+import {
+  getAICases,
+  updateAICase,
   deleteAICase,
   runAICase
 } from '@/api/ui_automation'
 
 const router = useRouter()
-const projects = ref([])
-const projectId = ref('')
 const cases = ref([])
 const loading = ref(false)
 const searchText = ref('')
@@ -126,39 +120,16 @@ const formRules = {
   task_description: [{ required: true, message: '请输入任务描述', trigger: 'blur' }]
 }
 
-// 加载项目列表
-const loadProjects = async () => {
-  try {
-    const response = await getUiProjects({ page_size: 100 })
-    projects.value = response.data.results || response.data
-    if (projects.value.length > 0) {
-      projectId.value = projects.value[0].id
-      loadCases()
-    }
-  } catch (error) {
-    console.error('获取项目列表失败:', error)
-    ElMessage.error('获取项目列表失败')
-  }
-}
-
-const onProjectChange = () => {
-  pagination.currentPage = 1
-  loadCases()
-}
-
 // 加载用例列表
 const loadCases = async () => {
-  if (!projectId.value) return
-  
   loading.value = true
   try {
     const response = await getAICases({
-      project: projectId.value,
       page: pagination.currentPage,
       page_size: pagination.pageSize,
       search: searchText.value
     })
-    
+
     cases.value = response.data.results || []
     total.value = response.data.count || 0
   } catch (error) {
@@ -257,7 +228,7 @@ const formatDate = (row, column, cellValue) => {
 }
 
 onMounted(() => {
-  loadProjects()
+  loadCases()
 })
 </script>
 

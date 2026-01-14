@@ -390,61 +390,6 @@ class TaskExecutionLog(models.Model):
 
 # ================ 通知管理相关模型 ================
 
-class NotificationConfig(models.Model):
-    """通知配置模型"""
-
-    CONFIG_TYPE_CHOICES = [
-        ('webhook_feishu', '飞书机器人'),
-        ('webhook_wechat', '企业微信机器人'),
-        ('webhook_dingtalk', '钉钉机器人'),
-    ]
-
-    name = models.CharField(max_length=100, verbose_name='配置名称', help_text='用于标识该通知配置的名称')
-    config_type = models.CharField(max_length=20, choices=CONFIG_TYPE_CHOICES, default='webhook_feishu',
-                                   verbose_name='配置类型')
-    webhook_bots = models.JSONField(default=dict, blank=True, null=True, verbose_name='Webhook机器人配置',
-                                    help_text='飞书、企业微信、钉钉机器人配置')
-    is_default = models.BooleanField(default=False, verbose_name='是否默认配置')
-    is_active = models.BooleanField(default=True, verbose_name='是否启用')
-
-    # 业务类型启用开关
-    enable_ui_automation = models.BooleanField(default=True, verbose_name='启用UI自动化通知')
-    enable_api_testing = models.BooleanField(default=True, verbose_name='启用接口测试通知')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='创建者')
-
-    class Meta:
-        db_table = 'api_notification_configs'
-        verbose_name = '通知配置'
-        verbose_name_plural = '通知配置'
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['config_type']),
-            models.Index(fields=['is_default']),
-            models.Index(fields=['created_by']),
-        ]
-
-    # def __str__(self):
-    #     return f"{self.name} - {self.sender_name}"
-
-    def get_webhook_bots(self):
-        """获取配置的所有webhook机器人"""
-        bots = []
-        if self.webhook_bots:
-            for bot_type, bot_config in self.webhook_bots.items():
-                bot_data = {
-                    'type': bot_type,
-                    'name': bot_config.get('name', f'{bot_type}机器人'),
-                    'webhook_url': bot_config.get('webhook_url'),
-                    'enabled': bot_config.get('enabled', True)
-                }
-                # 钉钉机器人需要额外包含secret字段
-                if bot_type == 'dingtalk' and bot_config.get('secret'):
-                    bot_data['secret'] = bot_config.get('secret')
-                bots.append(bot_data)
-        return bots
-
 
 class NotificationLog(models.Model):
     """通知日志模型"""
@@ -466,6 +411,7 @@ class NotificationLog(models.Model):
 
     task = models.ForeignKey(ScheduledTask, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='关联任务')
     task_name = models.CharField(max_length=200, verbose_name='任务名称', help_text='相关任务的名称')
+    task_type = models.CharField(max_length=20, blank=True, null=True, verbose_name='任务类型快照', help_text='发送通知时的任务类型')
     notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPES, verbose_name='通知类型')
     sender_name = models.CharField(max_length=100, verbose_name='发件人姓名')
     sender_email = models.EmailField(verbose_name='发件人邮箱')
@@ -541,8 +487,9 @@ class TaskNotificationSetting(models.Model):
                              verbose_name='关联任务')
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='both',
                                          verbose_name='通知类型')
-    notification_config = models.ForeignKey(NotificationConfig, on_delete=models.SET_NULL, null=True, blank=True,
-                                            related_name='notification_config', verbose_name='通知配置')
+    notification_config = models.ForeignKey('core.UnifiedNotificationConfig', on_delete=models.SET_NULL,
+                                            null=True, blank=True, related_name='task_notification_settings',
+                                            verbose_name='通知配置')
     is_enabled = models.BooleanField(default=False, verbose_name='是否启用通知')
     notify_on_success = models.BooleanField(default=True, verbose_name='成功时通知')
     notify_on_failure = models.BooleanField(default=True, verbose_name='失败时通知')
@@ -580,7 +527,9 @@ class TaskNotificationSetting(models.Model):
         if self.notification_config:
             return self.notification_config
         # 如果没有指定配置，返回系统默认配置
-        return NotificationConfig.objects.filter(is_default=True, is_active=True).first()
+        # 使用字符串引用避免循环导入
+        from apps.core.models import UnifiedNotificationConfig
+        return UnifiedNotificationConfig.objects.filter(is_default=True, is_active=True).first()
 
     def should_notify(self, execution_status):
         """判断是否应该发送通知"""

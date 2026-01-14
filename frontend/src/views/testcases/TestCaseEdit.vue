@@ -235,7 +235,7 @@ const fetchTestCase = async () => {
     form.priority = testcase.priority
     form.test_type = testcase.test_type
     form.status = testcase.status
-    form.preconditions = testcase.preconditions
+    form.preconditions = convertBrToNewline(testcase.preconditions || '')
     form.expected_result = convertBrToNewline(testcase.expected_result || '')
 
     // 填充操作步骤数据（将<br>转换为换行符）
@@ -266,6 +266,7 @@ const handleSubmit = async () => {
         // 在提交前将换行符转换回<br>标签
         const submitData = {
           ...form,
+          preconditions: convertNewlineToBr(form.preconditions || ''),
           steps: convertNewlineToBr(form.steps || ''),
           expected_result: convertNewlineToBr(form.expected_result || '')
         }

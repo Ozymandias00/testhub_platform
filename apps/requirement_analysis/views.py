@@ -1779,6 +1779,40 @@ class TestCaseGenerationTaskViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @action(detail=True, methods=['post'])
+    def update_test_cases(self, request, task_id=None):
+        """更新测试用例内容"""
+        try:
+            task = self.get_object()
+
+            final_test_cases = request.data.get('final_test_cases')
+            if not final_test_cases:
+                return Response(
+                    {'error': '缺少final_test_cases参数'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            logger.info(f"开始更新任务 {task.task_id} 的测试用例内容")
+
+            # 更新final_test_cases字段
+            task.final_test_cases = final_test_cases
+            task.save(update_fields=['final_test_cases'])
+
+            logger.info(f"任务 {task.task_id} 测试用例更新成功")
+
+            return Response({
+                'message': '测试用例更新成功',
+                'task_id': task.task_id,
+                'final_test_cases': task.final_test_cases
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"更新测试用例时出错: {e}")
+            return Response(
+                {'error': f'更新失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     def _parse_test_cases_content(self, content):
         """解析测试用例内容 - 支持多种格式"""
         if not content:

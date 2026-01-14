@@ -24,7 +24,7 @@ from datetime import datetime, timedelta
 from .models import (
     ApiProject, ApiCollection, ApiRequest, Environment,
     RequestHistory, TestSuite, TestExecution, TestSuiteRequest,
-    ScheduledTask, TaskExecutionLog, NotificationConfig, NotificationLog,
+    ScheduledTask, TaskExecutionLog, NotificationLog,
     TaskNotificationSetting, OperationLog,
 )
 
@@ -33,8 +33,8 @@ from .serializers import (
     EnvironmentSerializer, RequestHistorySerializer, TestSuiteSerializer,
     TestSuiteRequestSerializer, TestExecutionSerializer, UserSerializer,
     ScheduledTaskSerializer, TaskExecutionLogSerializer,
-    NotificationConfigSerializer, NotificationLogSerializer, TaskNotificationSettingSerializer,
-    NotificationConfigDetailSerializer, NotificationLogDetailSerializer,
+    NotificationLogSerializer, TaskNotificationSettingSerializer,
+    NotificationLogDetailSerializer,
     TaskNotificationSettingDetailSerializer, OperationLogSerializer
 )
 
@@ -1780,6 +1780,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
             NotificationLog.objects.create(
                 task=task,
                 task_name=task.name,
+                task_type=task.task_type,
                 notification_type='task_execution',
                 sender_name='系统邮件通知',
                 sender_email=from_email,
@@ -1797,6 +1798,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
                 NotificationLog.objects.create(
                     task=task,
                     task_name=task.name,
+                    task_type=task.task_type,
                     notification_type='task_execution',
                     sender_name='系统邮件通知',
                     sender_email=settings.DEFAULT_FROM_EMAIL,
@@ -1819,15 +1821,39 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
             logger.info("=== 开始发送Webhook通知 ===")
 
             all_webhook_bots = []
-            
-            # 1. 首先获取配置中的机器
-            if notification_config:
-                bots = notification_config.get_webhook_bots()
-                for bot in bots:
-                    if bot.get('enabled', True):
-                        all_webhook_bots.append(bot)
-            
-            # 2. 获取自定义机器人配置 (覆盖同名/同类型或者是累加，这里选择累加)
+
+            # 使用统一的通知配置
+            try:
+                from apps.core.models import UnifiedNotificationConfig
+                all_webhook_configs = UnifiedNotificationConfig.objects.filter(
+                    config_type__in=['webhook_wechat', 'webhook_feishu', 'webhook_dingtalk'],
+                    is_active=True
+                )
+                logger.info("使用统一通知配置 (UnifiedNotificationConfig)")
+
+                for config in all_webhook_configs:
+                    bots = config.get_webhook_bots()
+                    for bot in bots:
+                        # 只添加启用了"接口测试"的机器人
+                        if bot.get('enabled', True) and bot.get('enable_api_testing', True):
+                            all_webhook_bots.append(bot)
+                            logger.info(f"从统一配置获取机器人: {bot.get('name')} (接口测试已启用)")
+                        elif bot.get('enabled', True):
+                            logger.info(f"统一配置机器人 {bot.get('name')} 未启用接口测试，跳过")
+
+            except ImportError:
+                logger.warning("无法导入统一配置，尝试使用 API 测试模块配置")
+                # 回退到旧的逻辑
+                if notification_config:
+                    bots = notification_config.get_webhook_bots()
+                    for bot in bots:
+                        if bot.get('enabled', True):
+                            all_webhook_bots.append(bot)
+                            logger.info(f"从 API 测试配置获取机器人: {bot.get('name')}")
+            except Exception as e:
+                logger.error(f"获取统一配置时出错: {e}")
+
+            # 获取自定义机器人配置 (覆盖同名/同类型或者是累加，这里选择累加)
             if notification_setting.custom_webhook_bots:
                 logger.info(f"发现自定义Webhook机器人配置: {len(notification_setting.custom_webhook_bots)}个")
                 for bot_type, bot_config in notification_setting.custom_webhook_bots.items():
@@ -1840,7 +1866,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
                     }
                     if bot_type == 'dingtalk' and bot_config.get('secret'):
                         bot_data['secret'] = bot_config.get('secret')
-                        
+
                     if bot_data.get('enabled', True) and bot_data.get('webhook_url'):
                         all_webhook_bots.append(bot_data)
 
@@ -1966,6 +1992,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
                     NotificationLog.objects.create(
                         task=task,
                         task_name=task.name,
+                        task_type=task.task_type,
                         notification_type='task_execution',
                         sender_name=f'系统Webhook通知-{bot_type}',
                         sender_email='',
@@ -1993,6 +2020,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
                         NotificationLog.objects.create(
                             task=task,
                             task_name=task.name,
+                            task_type=task.task_type,
                             notification_type='task_execution',
                             sender_name=f'系统Webhook通知-{bot_type}',
                             sender_email='',
@@ -2035,72 +2063,6 @@ class TaskExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 # ================ 通知管理相关视图集 ================
-
-class NotificationConfigViewSet(viewsets.ModelViewSet):
-    """通知配置视图集"""
-    queryset = NotificationConfig.objects.all()
-    serializer_class = NotificationConfigSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['is_active', 'is_default', 'config_type']
-    search_fields = ['name', 'sender_name', 'sender_email']
-    ordering = ['-created_at']
-    
-    def get_queryset(self):
-        user = self.request.user
-        queryset = NotificationConfig.objects.filter(
-            models.Q(created_by=user) | models.Q(is_default=True)
-        )
-        
-        # 支持按配置类型过滤
-        config_type = self.request.query_params.get('config_type', None)
-        if config_type:
-            queryset = queryset.filter(config_type=config_type)
-        
-        return queryset.distinct()
-    
-    @action(detail=True, methods=['post'], url_path='add-bot')
-    def add_webhook_bot(self, request, pk=None):
-        """添加Webhook机器人配置"""
-        config = self.get_object()
-        bot_type = request.data.get('bot_type')
-        name = request.data.get('name')
-        webhook_url = request.data.get('webhook_url')
-        
-        if not all([bot_type, name, webhook_url]):
-            return Response({'error': '请提供完整的机器人信息'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # 获取现有配置
-        webhook_bots = config.webhook_bots or {}
-        webhook_bots[bot_type] = {
-            'name': name,
-            'webhook_url': webhook_url,
-            'enabled': True
-        }
-        
-        config.webhook_bots = webhook_bots
-        config.save()
-        
-        serializer = NotificationConfigDetailSerializer(config)
-        return Response(serializer.data)
-    
-    @action(detail=True, methods=['post'], url_path='remove-bot')
-    def remove_webhook_bot(self, request, pk=None):
-        """移除Webhook机器人配置"""
-        config = self.get_object()
-        bot_type = request.data.get('bot_type')
-
-        if not bot_type:
-            return Response({'error': '请提供机器人类型'}, status=status.HTTP_400_BAD_REQUEST)
-
-        webhook_bots = config.webhook_bots or {}
-        if bot_type in webhook_bots:
-            del webhook_bots[bot_type]
-            config.webhook_bots = webhook_bots
-            config.save()
-            return Response({'message': f'{bot_type}机器人已移除'})
-
-        return Response({'error': '未找到该机器人配置'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):

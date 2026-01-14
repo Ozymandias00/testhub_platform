@@ -634,4 +634,511 @@ onMounted(() => {
 .empty-container {
   padding: 40px 0;
 }
+
+@media screen and (max-width: 1920px) {
+  .stats-section {
+    margin-bottom: 36px;
+  }
+  
+  .stat-content {
+    height: 90px;
+  }
+  
+  .stat-icon {
+    width: 55px;
+    height: 55px;
+    font-size: 22px;
+  }
+  
+  .stat-value {
+    font-size: 26px;
+  }
+  
+  .content-section {
+    margin-bottom: 36px;
+  }
+  
+  .features-section {
+    margin-bottom: 36px;
+  }
+}
+
+@media screen and (max-width: 1600px) {
+  .stats-section {
+    margin-bottom: 32px;
+  }
+  
+  .stat-content {
+    height: 85px;
+  }
+  
+  .stat-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+  
+  .stat-value {
+    font-size: 24px;
+  }
+  
+  .content-section {
+    margin-bottom: 32px;
+  }
+  
+  .features-section {
+    margin-bottom: 32px;
+  }
+  
+  .section-title {
+    font-size: 22px;
+  }
+}
+
+@media screen and (max-width: 1440px) {
+  .stats-section {
+    margin-bottom: 28px;
+  }
+  
+  .stat-content {
+    height: 80px;
+  }
+  
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
+  }
+  
+  .stat-value {
+    font-size: 22px;
+  }
+  
+  .content-section {
+    margin-bottom: 28px;
+  }
+  
+  .features-section {
+    margin-bottom: 28px;
+  }
+  
+  .section-title {
+    font-size: 20px;
+  }
+  
+  .actions-grid {
+    gap: 12px;
+  }
+  
+  .action-item {
+    padding: 12px 8px;
+  }
+  
+  .action-icon {
+    width: 45px;
+    height: 45px;
+    font-size: 22px;
+  }
+  
+  .action-label {
+    font-size: 15px;
+  }
+}
+
+@media screen and (max-width: 1366px) {
+  .stats-section {
+    margin-bottom: 24px;
+  }
+  
+  .stat-content {
+    height: 75px;
+  }
+  
+  .stat-icon {
+    width: 45px;
+    height: 45px;
+    font-size: 18px;
+  }
+  
+  .stat-value {
+    font-size: 20px;
+  }
+  
+  .stat-label {
+    font-size: 13px;
+  }
+  
+  .content-section {
+    margin-bottom: 24px;
+  }
+  
+  .features-section {
+    margin-bottom: 24px;
+  }
+  
+  .section-title {
+    font-size: 18px;
+  }
+  
+  .activities-list {
+    max-height: 350px;
+  }
+  
+  .actions-grid {
+    gap: 10px;
+  }
+  
+  .action-item {
+    padding: 10px 6px;
+  }
+  
+  .action-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+  
+  .action-label {
+    font-size: 14px;
+  }
+  
+  .feature-card {
+    padding: 20px;
+  }
+  
+  .feature-icon {
+    width: 70px;
+    height: 70px;
+    font-size: 32px;
+  }
+  
+  .feature-title {
+    font-size: 16px;
+  }
+  
+  .feature-description {
+    font-size: 13px;
+  }
+}
+
+@media screen and (max-width: 1280px) {
+  .stats-section {
+    margin-bottom: 20px;
+  }
+  
+  .stat-content {
+    height: 70px;
+  }
+  
+  .stat-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 16px;
+  }
+  
+  .stat-value {
+    font-size: 18px;
+  }
+  
+  .stat-label {
+    font-size: 12px;
+  }
+  
+  .content-section {
+    margin-bottom: 20px;
+  }
+  
+  .features-section {
+    margin-bottom: 20px;
+  }
+  
+  .section-title {
+    font-size: 18px;
+  }
+  
+  .activities-list {
+    max-height: 300px;
+  }
+  
+  .action-item {
+    padding: 8px 5px;
+  }
+  
+  .action-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+  }
+  
+  .action-label {
+    font-size: 13px;
+  }
+  
+  .feature-card {
+    padding: 15px;
+  }
+  
+  .feature-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 28px;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .stats-section {
+    margin-bottom: 18px;
+  }
+  
+  .stat-content {
+    height: 65px;
+  }
+  
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  
+  .stat-value {
+    font-size: 16px;
+  }
+  
+  .stat-label {
+    font-size: 12px;
+  }
+  
+  .content-section {
+    margin-bottom: 18px;
+  }
+  
+  .features-section {
+    margin-bottom: 18px;
+  }
+  
+  .section-title {
+    font-size: 16px;
+  }
+  
+  .activities-list {
+    max-height: 280px;
+  }
+  
+  .actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .action-item {
+    padding: 10px 8px;
+  }
+  
+  .action-label {
+    font-size: 13px;
+  }
+  
+  .feature-card {
+    padding: 12px;
+  }
+  
+  .feature-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+  }
+  
+  .feature-title {
+    font-size: 14px;
+  }
+  
+  .feature-description {
+    font-size: 12px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .stats-section {
+    margin-bottom: 15px;
+  }
+  
+  .stat-content {
+    height: 60px;
+  }
+  
+  .stat-icon {
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+  }
+  
+  .stat-value {
+    font-size: 14px;
+  }
+  
+  .stat-label {
+    font-size: 11px;
+  }
+  
+  .content-section {
+    margin-bottom: 15px;
+  }
+  
+  .features-section {
+    margin-bottom: 15px;
+  }
+  
+  .section-title {
+    font-size: 16px;
+    margin-bottom: 15px;
+  }
+  
+  .activities-list {
+    max-height: 250px;
+  }
+  
+  .activity-item {
+    padding: 10px 0;
+  }
+  
+  .activity-icon {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .activity-text {
+    font-size: 13px;
+  }
+  
+  .actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  .action-item {
+    padding: 8px 5px;
+  }
+  
+  .action-icon {
+    width: 35px;
+    height: 35px;
+    font-size: 16px;
+  }
+  
+  .action-label {
+    font-size: 12px;
+  }
+  
+  .feature-card {
+    padding: 10px;
+  }
+  
+  .feature-icon {
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
+  }
+  
+  .feature-title {
+    font-size: 13px;
+  }
+  
+  .feature-description {
+    font-size: 11px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .stats-section {
+    margin-bottom: 12px;
+  }
+  
+  .stat-content {
+    height: 55px;
+  }
+  
+  .stat-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+  
+  .stat-value {
+    font-size: 13px;
+  }
+  
+  .stat-label {
+    font-size: 10px;
+  }
+  
+  .content-section {
+    margin-bottom: 12px;
+  }
+  
+  .features-section {
+    margin-bottom: 12px;
+  }
+  
+  .section-title {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  
+  .activities-list {
+    max-height: 200px;
+  }
+  
+  .activity-item {
+    padding: 8px 0;
+  }
+  
+  .activity-icon {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .activity-text {
+    font-size: 12px;
+  }
+  
+  .activity-time {
+    font-size: 11px;
+  }
+  
+  .actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  
+  .action-item {
+    padding: 6px 3px;
+  }
+  
+  .action-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+  
+  .action-label {
+    font-size: 11px;
+  }
+  
+  .feature-card {
+    padding: 8px;
+  }
+  
+  .feature-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+  
+  .feature-title {
+    font-size: 12px;
+  }
+  
+  .feature-description {
+    font-size: 10px;
+  }
+}
 </style>

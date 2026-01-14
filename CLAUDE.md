@@ -25,8 +25,8 @@ python manage.py migrate
 # Create superuser
 python manage.py createsuperuser
 
-# Run scheduled tasks
-python manage.py run_scheduled_tasks
+# Run all scheduled tasks (API testing + UI automation)
+python manage.py run_all_scheduled_tasks
 
 # Initialize UI automation locator strategies
 python manage.py init_locator_strategies

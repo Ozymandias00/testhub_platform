@@ -6,8 +6,13 @@
 __pycache__/
 .DS_Store
 .pytest_cache
+备注笔记.txt
+frontend/dist/
+# 忽略log文件
 logs/*
 !logs/.gitkeep
+# 忽略.env
+.env
 
 # 忽略所有 app/*/migrations/ 目录下的所有内容 (包括文件和子目录)
 apps/*/migrations/*

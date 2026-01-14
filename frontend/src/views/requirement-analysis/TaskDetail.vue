@@ -20,6 +20,32 @@
       </div>
     </div>
 
+    <!-- 需求描述折叠卡片 -->
+    <div v-if="task.requirement_text" class="requirement-description-card">
+      <el-collapse>
+        <el-collapse-item name="requirement">
+          <template #title>
+            <div class="collapse-title">
+              <span class="title-icon">📋</span>
+              <span class="title-text">需求描述</span>
+              <span class="title-hint">（点击展开查看完整内容）</span>
+            </div>
+          </template>
+          <div class="requirement-content">
+            <div class="requirement-text">
+              {{ task.requirement_text }}
+            </div>
+            <div class="requirement-actions">
+              <el-button size="small" @click="copyRequirementText">
+                <el-icon><DocumentCopy /></el-icon>
+                复制需求描述
+              </el-button>
+            </div>
+          </div>
+        </el-collapse-item>
+      </el-collapse>
+    </div>
+
     <div v-if="isLoading" class="loading-state">
       <p>🔄 正在加载任务详情...</p>
     </div>
@@ -87,11 +113,11 @@
             </div>
             <div class="body-cell">{{ testCase.caseId || `TC${String(index + 1).padStart(3, '0')}` }}</div>
             <div class="body-cell">{{ testCase.scenario }}</div>
-            <div class="body-cell">{{ testCase.precondition }}</div>
+            <div class="body-cell text-limit-2">{{ formatTextForList(testCase.precondition) }}</div>
             <div class="body-cell text-limit-2">{{ formatTextForList(testCase.steps) }}</div>
             <div class="body-cell text-limit-2">{{ formatTextForList(testCase.expected) }}</div>
             <div class="body-cell">
-              <span class="priority-tag" :class="testCase.priority?.toLowerCase()">{{ testCase.priority || '中' }}</span>
+              <span class="priority-tag" :class="testCase.priority?.toLowerCase()">{{ testCase.priority || 'P2' }}</span>
             </div>
             <div class="body-cell">
               <div class="action-buttons">
@@ -136,10 +162,12 @@
     <div v-if="showCaseDetail" class="case-detail-modal" @click="closeCaseDetail">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>测试用例详情</h3>
+          <h3>{{ isEditing ? '编辑测试用例' : '测试用例详情' }}</h3>
           <button class="close-btn" @click="closeCaseDetail">×</button>
         </div>
-        <div class="modal-body">
+
+        <!-- 查看模式 -->
+        <div v-if="!isEditing" class="modal-body">
           <div class="detail-item">
             <label>用例编号:</label>
             <span>{{ selectedCase.caseId || `TC${String(selectedCaseIndex + 1).padStart(3, '0')}` }}</span>
@@ -150,7 +178,7 @@
           </div>
           <div class="detail-item">
             <label>前置条件:</label>
-            <p>{{ selectedCase.precondition }}</p>
+            <p v-html="selectedCase.precondition || '无'"></p>
           </div>
           <div class="detail-item">
             <label>操作步骤:</label>
@@ -162,8 +190,58 @@
           </div>
           <div class="detail-item">
             <label>优先级:</label>
-            <span class="priority-tag" :class="selectedCase.priority?.toLowerCase()">{{ selectedCase.priority || '中' }}</span>
+            <span class="priority-tag" :class="selectedCase.priority?.toLowerCase()">{{ selectedCase.priority || 'P2' }}</span>
           </div>
+        </div>
+
+        <!-- 编辑模式 -->
+        <div v-else class="modal-body edit-mode">
+          <div class="form-item">
+            <label>用例编号:</label>
+            <span class="readonly-field">{{ editForm.caseId || `TC${String(selectedCaseIndex + 1).padStart(3, '0')}` }}</span>
+          </div>
+          <div class="form-item">
+            <label>测试场景:</label>
+            <el-input v-model="editForm.scenario" type="textarea" :rows="2" placeholder="请输入测试场景" />
+          </div>
+          <div class="form-item">
+            <label>前置条件:</label>
+            <el-input v-model="editForm.precondition" type="textarea" :rows="3" placeholder="请输入前置条件" />
+          </div>
+          <div class="form-item">
+            <label>操作步骤:</label>
+            <el-input v-model="editForm.steps" type="textarea" :rows="6" placeholder="请输入操作步骤" />
+          </div>
+          <div class="form-item">
+            <label>预期结果:</label>
+            <el-input v-model="editForm.expected" type="textarea" :rows="4" placeholder="请输入预期结果" />
+          </div>
+          <div class="form-item">
+            <label>优先级:</label>
+            <el-select v-model="editForm.priority" placeholder="请选择优先级">
+              <el-option label="P0" value="P0"></el-option>
+              <el-option label="P1" value="P1"></el-option>
+              <el-option label="P2" value="P2"></el-option>
+              <el-option label="P3" value="P3"></el-option>
+            </el-select>
+          </div>
+        </div>
+
+        <!-- 底部操作栏 -->
+        <div class="modal-footer">
+          <template v-if="!isEditing">
+            <button class="action-btn edit-btn" @click="startEdit">
+              <span>✏️ 编辑</span>
+            </button>
+            <button class="action-btn close-btn-footer" @click="closeCaseDetail">关闭</button>
+          </template>
+          <template v-else>
+            <button class="action-btn save-btn" @click="saveEdit" :disabled="isSaving">
+              <span v-if="isSaving">💾 保存中...</span>
+              <span v-else>💾 保存</span>
+            </button>
+            <button class="action-btn cancel-btn" @click="cancelEdit" :disabled="isSaving">取消</button>
+          </template>
         </div>
       </div>
     </div>
@@ -173,6 +251,7 @@
 <script>
 import api from '@/utils/api'
 import { ElMessage } from 'element-plus'
+import { DocumentCopy } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 
 export default {
@@ -189,7 +268,18 @@ export default {
       selectedCaseIndex: 0,
       currentPage: 1,
       pageSize: 10,
-      isExporting: false
+      isExporting: false,
+      // 编辑相关状态
+      isEditing: false,
+      isSaving: false,
+      editForm: {
+        caseId: '',
+        scenario: '',
+        precondition: '',
+        steps: '',
+        expected: '',
+        priority: 'P2'
+      }
     }
   },
 
@@ -223,6 +313,29 @@ export default {
   },
 
   methods: {
+    // 复制需求描述文本
+    async copyRequirementText() {
+      try {
+        await navigator.clipboard.writeText(this.task.requirement_text)
+        ElMessage.success('需求描述已复制到剪贴板')
+      } catch (error) {
+        // 如果 navigator.clipboard 不可用，使用备用方法
+        const textArea = document.createElement('textarea')
+        textArea.value = this.task.requirement_text
+        textArea.style.position = 'fixed'
+        textArea.style.opacity = '0'
+        document.body.appendChild(textArea)
+        textArea.select()
+        try {
+          document.execCommand('copy')
+          ElMessage.success('需求描述已复制到剪贴板')
+        } catch (err) {
+          ElMessage.error('复制失败，请手动复制')
+        }
+        document.body.removeChild(textArea)
+      }
+    },
+
     async loadTaskDetail() {
       try {
         // 获取任务基本信息
@@ -462,6 +575,130 @@ export default {
     closeCaseDetail() {
       this.showCaseDetail = false
       this.selectedCase = {}
+      this.isEditing = false
+      this.editForm = {
+        caseId: '',
+        scenario: '',
+        precondition: '',
+        steps: '',
+        expected: '',
+        priority: 'P2'
+      }
+    },
+
+    // 开始编辑
+    startEdit() {
+      this.isEditing = true
+
+      this.editForm = {
+        caseId: this.selectedCase.caseId || '',
+        scenario: this.selectedCase.scenario || '',
+        // 将<br>转换为换行符以便编辑
+        precondition: this.convertBrToNewline(this.selectedCase.precondition || ''),
+        steps: this.convertBrToNewline(this.selectedCase.steps || ''),
+        expected: this.convertBrToNewline(this.selectedCase.expected || ''),
+        // 直接使用原始优先级值，不转换
+        priority: this.selectedCase.priority || 'P2'
+      }
+    },
+
+    // 取消编辑
+    cancelEdit() {
+      this.isEditing = false
+      this.editForm = {
+        caseId: '',
+        scenario: '',
+        precondition: '',
+        steps: '',
+        expected: '',
+        priority: 'P2'
+      }
+    },
+
+    // 保存编辑
+    async saveEdit() {
+      // 简单验证
+      if (!this.editForm.scenario?.trim()) {
+        ElMessage.warning('请输入测试场景')
+        return
+      }
+
+      this.isSaving = true
+
+      try {
+        // 将换行符转换回<br>
+        const updatedCase = {
+          ...this.selectedCase,
+          scenario: this.editForm.scenario,
+          precondition: this.convertNewlineToBr(this.editForm.precondition),
+          steps: this.convertNewlineToBr(this.editForm.steps),
+          expected: this.convertNewlineToBr(this.editForm.expected),
+          priority: this.editForm.priority
+        }
+
+        // 更新本地数组中的数据
+        const index = this.testCases.findIndex(tc => tc === this.selectedCase)
+        if (index !== -1) {
+          this.testCases[index] = updatedCase
+          this.selectedCase = updatedCase
+        }
+
+        // 重新生成表格格式的测试用例字符串
+        const updatedTestCases = this.generateTestCasesString()
+
+        // 调用后端API保存（使用自定义action接口）
+        await api.post(`/requirement-analysis/api/testcase-generation/${this.taskId}/update_test_cases/`, {
+          final_test_cases: updatedTestCases
+        })
+
+        // 更新内存中的task数据
+        this.task.final_test_cases = updatedTestCases
+
+        ElMessage.success('测试用例更新成功')
+        this.isEditing = false
+      } catch (error) {
+        console.error('更新失败:', error)
+        ElMessage.error('更新失败: ' + (error.response?.data?.error || error.message))
+      } finally {
+        this.isSaving = false
+      }
+    },
+
+    // 将testCases数组重新生成为表格格式的字符串
+    generateTestCasesString() {
+      if (this.testCases.length === 0) return ''
+
+      // 表头
+      const headers = ['测试用例编号', '测试场景', '前置条件', '操作步骤', '预期结果', '优先级']
+      let result = headers.join(' | ') + '\n'
+      result += '|'.repeat(headers.length) + '\n'
+
+      // 数据行
+      this.testCases.forEach((testCase, index) => {
+        const row = [
+          testCase.caseId || `TC${String(index + 1).padStart(3, '0')}`,
+          testCase.scenario || '',
+          testCase.precondition || '',
+          testCase.steps || '',
+          testCase.expected || '',
+          testCase.priority || 'P2'
+        ]
+        result += row.join(' | ') + '\n'
+      })
+
+      return result
+    },
+
+    // 将HTML的<br>标签转换为换行符
+    convertBrToNewline(text) {
+      if (!text) return ''
+      return text.replace(/<br\s*\/?>/gi, '\n')
+    },
+
+    // 将换行符转换为HTML的<br>标签
+    convertNewlineToBr(text) {
+      if (!text) return ''
+      return text.replace(/\n/g, '<br>')
     },
 
     async adoptSingleCase(testCase, index) {
@@ -537,15 +774,26 @@ export default {
     mapPriority(priority) {
       const priorityMap = {
         '最高': 'critical',
-        '高': 'high', 
+        '高': 'high',
         '中': 'medium',
         '低': 'low',
         'P0': 'critical',
         'P1': 'high',
-        'P2': 'medium', 
+        'P2': 'medium',
         'P3': 'low'
       }
       return priorityMap[priority] || 'medium'
+    },
+
+    // 将英文优先级转换为中文显示
+    priorityToChinese(priority) {
+      const priorityMap = {
+        'critical': '紧急',
+        'high': '高',
+        'medium': '中',
+        'low': '低'
+      }
+      return priorityMap[priority] || '中'
     },
 
     // 导出到Excel
@@ -572,7 +820,7 @@ export default {
           worksheetData.push([
             testCase.caseId || `TC${String(index + 1).padStart(3, '0')}`,
             testCase.scenario || '',
-            testCase.precondition || '',
+            this.formatTextForList(testCase.precondition || ''),
             this.formatTextForList(testCase.steps || ''),
             this.formatTextForList(testCase.expected || ''),
             testCase.priority || '中'
@@ -634,6 +882,83 @@ export default {
   padding: 20px;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+/* 需求描述折叠卡片 */
+.requirement-description-card {
+  margin-bottom: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.collapse-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.title-icon {
+  font-size: 18px;
+}
+
+.title-text {
+  color: #303133;
+  font-weight: 600;
+}
+
+.title-hint {
+  font-size: 13px;
+  color: #909399;
+  font-weight: normal;
+}
+
+.requirement-content {
+  padding: 16px 0;
+}
+
+.requirement-text {
+  background: #f5f7fa;
+  border-radius: 6px;
+  padding: 16px;
+  line-height: 1.8;
+  color: #606266;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  border-left: 4px solid #409eff;
+}
+
+.requirement-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 自定义折叠面板样式 */
+.requirement-description-card :deep(.el-collapse) {
+  border: none;
+}
+
+.requirement-description-card :deep(.el-collapse-item__header) {
+  background: #fafafa;
+  border-bottom: 1px solid #e4e7ed;
+  padding: 16px 20px;
+  font-size: 15px;
+}
+
+.requirement-description-card :deep(.el-collapse-item__wrap) {
+  border-bottom: none;
+}
+
+.requirement-description-card :deep(.el-collapse-item__content) {
+  padding: 0 20px 16px;
 }
 
 .page-header {
@@ -842,7 +1167,17 @@ export default {
   color: #388e3c;
 }
 
+.priority-tag.p3 {
+  background: #e8f5e8;
+  color: #388e3c;
+}
+
 .priority-tag.medium {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.priority-tag.p2 {
   background: #e3f2fd;
   color: #1976d2;
 }
@@ -852,7 +1187,17 @@ export default {
   color: #f57c00;
 }
 
+.priority-tag.p1 {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
 .priority-tag.critical {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.priority-tag.p0 {
   background: #ffebee;
   color: #d32f2f;
 }
@@ -1035,5 +1380,92 @@ export default {
 
 .error-state a:hover {
   text-decoration: underline;
+}
+
+/* 编辑模式样式 */
+.edit-mode {
+  .form-item {
+    margin-bottom: 20px;
+  }
+
+  .form-item label {
+    font-weight: bold;
+    color: #2c3e50;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .readonly-field {
+    color: #666;
+    padding: 8px 12px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    display: inline-block;
+  }
+}
+
+/* 底部操作栏 */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 30px;
+  border-top: 1px solid #eee;
+  background: #f9f9f9;
+  border-radius: 0 0 12px 12px;
+}
+
+.action-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-btn {
+  background: #409eff;
+  color: white;
+}
+
+.edit-btn:hover {
+  background: #66b1ff;
+}
+
+.save-btn {
+  background: #67c23a;
+  color: white;
+}
+
+.save-btn:hover:not(:disabled) {
+  background: #85ce61;
+}
+
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancel-btn {
+  background: #909399;
+  color: white;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: #a6a9ad;
+}
+
+.close-btn-footer {
+  background: #e4e7ed;
+  color: #606266;
+}
+
+.close-btn-footer:hover {
+  background: #ecf5ff;
 }
 </style>

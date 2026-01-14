@@ -72,19 +72,19 @@
       <div v-else class="testcases-table">
         <div class="table-header">
           <div class="header-cell checkbox-cell">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               @change="toggleSelectAll"
               :checked="isAllSelected"
               class="task-checkbox">
           </div>
           <div class="header-cell serial-cell">序号</div>
-          <div class="header-cell">任务ID</div>
-          <div class="header-cell">关联需求</div>
-          <div class="header-cell">状态</div>
+          <div class="header-cell task-id-cell">任务ID</div>
+          <div class="header-cell requirement-name-cell">关联需求</div>
+          <div class="header-cell status-cell">状态</div>
           <div class="header-cell count-cell">用例条数</div>
-          <div class="header-cell">生成时间</div>
-          <div class="header-cell">操作</div>
+          <div class="header-cell time-cell">生成时间</div>
+          <div class="header-cell action-cell">操作</div>
         </div>
         
         <div class="table-body">
@@ -94,18 +94,18 @@
             class="table-row"
             :class="{ 'selected': isTaskSelected(task.task_id) }">
             <div class="body-cell checkbox-cell">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 :checked="isTaskSelected(task.task_id)"
                 @change="toggleTaskSelection(task.task_id)"
                 class="task-checkbox">
             </div>
             <div class="body-cell serial-cell">{{ getSerialNumber(index) }}</div>
-            <div class="body-cell">{{ task.task_id }}</div>
-            <div class="body-cell">
+            <div class="body-cell task-id-cell">{{ task.task_id }}</div>
+            <div class="body-cell requirement-name-cell">
               <span class="requirement-name">{{ task.title }}</span>
             </div>
-            <div class="body-cell">
+            <div class="body-cell status-cell">
               <span class="status-tag" :class="task.status">
                 {{ getStatusText(task.status) }}
               </span>
@@ -113,8 +113,8 @@
             <div class="body-cell count-cell">
               <span class="count-badge">{{ getTestCaseCount(task) }}</span>
             </div>
-            <div class="body-cell">{{ formatDateTime(task.created_at) }}</div>
-            <div class="body-cell">
+            <div class="body-cell time-cell">{{ formatDateTime(task.created_at) }}</div>
+            <div class="body-cell action-cell">
               <div class="action-buttons">
                 <button 
                   class="view-detail-btn" 
@@ -1182,7 +1182,7 @@ export default {
 
 .table-header {
   display: grid;
-  grid-template-columns: 50px 60px 180px 1fr 120px 100px 160px 280px;
+  grid-template-columns: 50px 60px 180px 320px 100px 100px 180px 200px;
   background: #f8f9fa;
   font-weight: bold;
   color: #2c3e50;
@@ -1190,7 +1190,7 @@ export default {
 
 .table-body .table-row {
   display: grid;
-  grid-template-columns: 50px 60px 180px 1fr 120px 100px 160px 280px;
+  grid-template-columns: 50px 60px 180px 320px 100px 100px 180px 200px;
   border-bottom: 1px solid #eee;
   transition: background 0.2s ease;
 }
@@ -1207,7 +1207,16 @@ export default {
   background: #bbdefb;
 }
 
-.header-cell,
+.header-cell {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #eee;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
 .body-cell {
   padding: 12px;
   display: flex;
@@ -1225,6 +1234,7 @@ export default {
 .checkbox-cell {
   justify-content: center;
   width: 50px;
+  flex-shrink: 0;
 }
 
 .serial-cell {
@@ -1232,6 +1242,7 @@ export default {
   width: 60px;
   font-weight: 500;
   color: #7f8c8d;
+  flex-shrink: 0;
 }
 
 .task-checkbox {
@@ -1241,9 +1252,70 @@ export default {
   accent-color: #3498db;
 }
 
+/* 任务ID列 */
+.task-id-cell {
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.body-cell.task-id-cell {
+  justify-content: flex-start;
+}
+
+/* 关联需求列 */
+.requirement-name-cell {
+  min-width: 320px;
+  max-width: 320px;
+  flex-shrink: 0;
+}
+
+.body-cell.requirement-name-cell {
+  justify-content: flex-start;
+}
+
+/* 状态列 */
+.status-cell {
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.body-cell.status-cell {
+  justify-content: center;
+}
+
+/* 用例条数列 */
 .count-cell {
   justify-content: center;
   width: 100px;
+  flex-shrink: 0;
+}
+
+/* 生成时间列 */
+.time-cell {
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.body-cell.time-cell {
+  justify-content: center;
+}
+
+/* 操作列 */
+.action-cell {
+  min-width: 200px;
+  flex-shrink: 0;
+}
+
+.body-cell.action-cell {
+  justify-content: flex-start;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 5px;
+  flex-wrap: nowrap;
+  align-items: center;
+  margin: 0 auto;
 }
 
 .count-badge {
@@ -1330,10 +1402,10 @@ export default {
   background: #3498db;
   color: white;
   border: none;
-  padding: 4px 8px;
+  padding: 6px 10px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   transition: background 0.3s ease;
   margin-right: 3px;
   white-space: nowrap;
@@ -1347,10 +1419,10 @@ export default {
   background: #27ae60;
   color: white;
   border: none;
-  padding: 4px 8px;
+  padding: 6px 10px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   transition: background 0.3s ease;
   margin-right: 3px;
   white-space: nowrap;
@@ -1364,10 +1436,10 @@ export default {
   background: #e74c3c;
   color: white;
   border: none;
-  padding: 4px 8px;
+  padding: 6px 10px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   transition: background 0.3s ease;
   white-space: nowrap;
 }
@@ -1704,14 +1776,14 @@ export default {
   .table-body .table-row {
     grid-template-columns: 150px 1fr 100px 140px 260px;
   }
-  
+
   .action-buttons {
     flex-direction: row;
     gap: 2px;
     align-items: center;
     flex-wrap: nowrap;
   }
-  
+
   .view-detail-btn,
   .adopt-btn,
   .discard-btn {
@@ -1726,12 +1798,12 @@ export default {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .stats-card {
     flex-wrap: wrap;
     gap: 20px;
   }
-  
+
   .table-header,
   .table-body .table-row {
     grid-template-columns: 120px 1fr 80px 120px 240px;

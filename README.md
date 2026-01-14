@@ -124,6 +124,13 @@ testhub_platform/
 │   ├── reports/                    # 测试报告
 │   ├── reviews/                    # 用例评审管理
 │   ├── versions/                   # 版本管理
+│   ├── core/                       # 核心功能模块
+│   │   ├── models.py               # 统一通知配置模型
+│   │   ├── views.py                # 核心功能视图
+│   │   └── management/commands/     # 管理命令
+│   │       ├── run_all_scheduled_tasks.py  # 统一定时任务调度器
+│   │       ├── init_locator_strategies.py  # 初始化元素定位策略
+│   │       └── download_webdrivers.py      # 下载浏览器驱动
 │   ├── requirement_analysis/       # AI 需求分析
 │   ├── assistant/                  # 智能助手
 │   ├── api_testing/                # API 测试
@@ -156,6 +163,7 @@ testhub_platform/
 │   └── package.json
 ├── media/                          # 媒体文件（上传文件、截图等）
 ├── logs/                           # 日志文件
+│   └── scheduler.log              # 统一调度器日志
 ├── allure/                         # Allure 测试报告
 ├── requirements.txt                # Python 依赖
 └── manage.py                       # Django 管理脚本
@@ -165,10 +173,10 @@ testhub_platform/
 
 ### 环境要求
 
-- **Python**: 3.11+
+- **Python**: 推荐Python3.12,其他版本可能会存在兼容性问题
 - **Node.js**: 18+
 - **MySQL**: 8.0+
-- **浏览器驱动**: ChromeDriver / GeckoDriver (用于 UI 自动化)
+- **浏览器驱动**: ChromeDriver / GeckoDriver (用于 UI 自动化,建议提前下载好)
 
 ### 后端部署
 
@@ -240,8 +248,13 @@ python manage.py createsuperuser
 # 根目录执行
 python manage.py init_locator_strategies
 ```
+7**启动定时任务**
+```bash
+# 启动统一任务调度器(同时管理API和UI模块)
+python manage.py run_all_scheduled_tasks
+```
 
-7**启动服务**
+8**启动服务**
 ```bash
 # 启动 Django 开发服务器
 python manage.py runserver
@@ -274,7 +287,43 @@ npm run build
 
 ## 📚 核心功能模块说明
 
-### 1. AI 需求分析模块 (`requirement_analysis`)
+### 1. 核心功能模块 (`core`)
+
+**概述**:
+`core` 模块是跨模块的通用功能模块，提供全局共享的管理命令和统一配置管理。
+
+**管理命令**:
+- `run_all_scheduled_tasks`: 统一定时任务调度器
+  - 同时调度 API 测试和 UI 自动化模块的定时任务
+  - 支持自定义检查间隔（默认60秒）
+  - 支持单次执行模式（`--once`）
+  - 详细日志输出，便于调试和监控
+
+- `init_locator_strategies`: 初始化UI自动化元素定位策略
+  - 创建/更新12种常用元素定位策略
+  - 通用策略：ID, CSS, XPath, name, class, tag
+  - Playwright 专用策略：text, placeholder, role, label, title, test-id
+
+- `download_webdrivers`: 下载浏览器驱动
+  - 支持 Chrome (ChromeDriver)
+  - 支持 Firefox (GeckoDriver)
+  - 支持 Edge (EdgeDriver)
+  - 自动缓存，后续使用更快
+
+**数据模型**:
+- `UnifiedNotificationConfig`: 统一通知配置
+  - 支持企业微信、钉钉、飞书等多种 Webhook 机器人
+  - 每个机器人可独立配置启用状态
+  - 支持 API 测试和 UI 自动化测试模块独立开关
+  - JSON 格式存储多个机器人配置
+
+**API 路由**:
+- `/api/core/notification-configs/`: 统一通知配置管理
+
+**日志文件**:
+- `logs/scheduler.log`: 统一调度器运行日志
+
+### 2. AI 需求分析模块 (`requirement_analysis`)
 
 **功能**:
 - 上传需求文档（PDF/Word/TXT）
@@ -291,7 +340,7 @@ npm run build
 - `AnalysisTask`: 分析任务
 - `AIModelConfig`: AI 模型配置
 
-### 2. 智能助手模块 (`assistant`)
+### 3. 智能助手模块 (`assistant`)
 
 **功能**:
 - 集成 Dify AI 助手
@@ -304,7 +353,7 @@ npm run build
 - `AssistantSession`: 助手会话
 - `ChatMessage`: 聊天消息
 
-### 3. API 测试模块 (`api_testing`)
+### 4. API 测试模块 (`api_testing`)
 
 **功能**:
 - API 项目和集合管理
@@ -325,7 +374,7 @@ npm run build
 - `ApiScheduledTask`: 定时任务
 - `ApiNotificationConfig`: 通知配置
 
-### 4. UI 自动化测试模块 (`ui_automation`)
+### 5. UI 自动化测试模块 (`ui_automation`)
 
 **功能**:
 - 元素库管理（支持多种定位策略）
@@ -360,14 +409,14 @@ npm run build
 - `AICase`: AI 智能用例
 - `AIIntelligentModeConfig`: AI 智能模式配置
 
-### 5. 统一配置中心模块 (`configuration`)
+### 6. 统一配置中心模块 (`configuration`)
 
 **功能**:
 - **环境检测**: 自动检测系统已安装的浏览器
 - **驱动管理**: 一键安装 Playwright 浏览器驱动
 - **AI 模型配置**:
-  - 支持多种 AI 提供商：OpenAI、Azure OpenAI、Anthropic、Google Gemini、DeepSeek、硅基流动
-  - 按角色配置：测试用例编写器、测试用例评审员、Browser Use 文本/视觉模式
+  - 支持多种 AI 提供商：通义千问、DeepSeek、硅基流动、本地模型
+  - 按角色配置：测试用例编写器、测试用例评审员、Browser Use 文本模式
   - API 密钥、基础 URL、模型名称、参数配置
   - 连接测试功能
 
@@ -375,7 +424,7 @@ npm run build
 - `/api/ui-automation/config/environment/`: 环境配置
 - `/api/ui-automation/config/ai-mode/`: AI 智能模式配置
 
-### 6. 测试用例评审模块 (`reviews`)
+### 7. 测试用例评审模块 (`reviews`)
 
 **功能**:
 - 创建评审任务
@@ -390,7 +439,7 @@ npm run build
 - `TestCaseReviewComment`: 评审意见
 - `ReviewTemplate`: 评审模板
 
-### 7. 测试执行模块 (`executions`)
+### 8. 测试执行模块 (`executions`)
 
 **功能**:
 - 测试计划管理
@@ -451,7 +500,7 @@ SIMPLE_JWT = {
 - `testcase_writer`: 测试用例编写
 - `testcase_reviewer`: 测试用例评审
 - `browser_use_text`: Browser Use 文本模式（DOM 解析）
-- `browser_use_vision`: Browser Use 视觉模式（截图识别）
+- `browser_use_vision`: Browser Use 视觉模式（截图识别）- 暂未实现
 
 **配置参数**:
 - API Key: API 访问密钥
@@ -504,6 +553,7 @@ SIMPLE_JWT = {
 - **测试套件**: `testsuites`, `testsuite_cases`
 - **测试执行**: `test_plans`, `test_runs`, `test_run_cases`
 - **用例评审**: `testcase_reviews`, `review_assignments`, `review_comments`
+- **核心配置**: `core_unifiednotificationconfig` - 统一通知配置
 - **需求分析**: `requirement_documents`, `requirement_analyses`, `business_requirements`, `generated_test_cases`
 - **AI 配置**: `ai_model_configs`, `prompt_configs` - AI 模型和提示词配置
 - **智能助手**: `dify_configs`, `assistant_sessions`, `chat_messages`

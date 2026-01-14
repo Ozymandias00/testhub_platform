@@ -53,6 +53,12 @@
                       </div>
                     </el-form-item>
                   </el-col>
+                  <el-col :span="24">
+                    <el-form-item label="业务类型">
+                      <el-checkbox v-model="webhookBots.feishu.enable_ui_automation">UI自动化测试</el-checkbox>
+                      <el-checkbox v-model="webhookBots.feishu.enable_api_testing">接口测试</el-checkbox>
+                    </el-form-item>
+                  </el-col>
                 </el-row>
 
                 <div class="form-actions">
@@ -98,6 +104,12 @@
                       <div class="form-item-hint">
                         企业微信机器人Webhook URL格式：https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...
                       </div>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="24">
+                    <el-form-item label="业务类型">
+                      <el-checkbox v-model="webhookBots.wechat.enable_ui_automation">UI自动化测试</el-checkbox>
+                      <el-checkbox v-model="webhookBots.wechat.enable_api_testing">接口测试</el-checkbox>
                     </el-form-item>
                   </el-col>
                 </el-row>
@@ -160,6 +172,12 @@
                       </div>
                     </el-form-item>
                   </el-col>
+                  <el-col :span="24">
+                    <el-form-item label="业务类型">
+                      <el-checkbox v-model="webhookBots.dingtalk.enable_ui_automation">UI自动化测试</el-checkbox>
+                      <el-checkbox v-model="webhookBots.dingtalk.enable_api_testing">接口测试</el-checkbox>
+                    </el-form-item>
+                  </el-col>
                 </el-row>
 
                 <div class="form-actions">
@@ -180,7 +198,11 @@
 import {Setting} from '@element-plus/icons-vue'
 import {ref, reactive, onMounted} from 'vue'
 import {ElMessage} from 'element-plus'
-import axios from 'axios'
+import {
+  getUnifiedNotificationConfigs,
+  createUnifiedNotificationConfig,
+  updateUnifiedNotificationConfig
+} from '@/api/core.js'
 
 export default {
   name: 'NotificationConfigs',
@@ -201,18 +223,24 @@ export default {
       feishu: {
         name: '',
         webhook_url: '',
-        enabled: true
+        enabled: true,
+        enable_ui_automation: true,
+        enable_api_testing: true
       },
       wechat: {
         name: '',
         webhook_url: '',
-        enabled: true
+        enabled: true,
+        enable_ui_automation: true,
+        enable_api_testing: true
       },
       dingtalk: {
         name: '',
         webhook_url: '',
         secret: '',
-        enabled: true
+        enabled: true,
+        enable_ui_automation: true,
+        enable_api_testing: true
       }
     })
 
@@ -247,7 +275,7 @@ export default {
         // 检查是否已存在对应类型的机器人配置
         let webhookConfigId = null
         try {
-          const response = await axios.get(`/api/api-testing/notification-configs/?config_type=${configType}`)
+          const response = await getUnifiedNotificationConfigs({ config_type: configType })
           if (response.data.results && response.data.results.length > 0) {
             webhookConfigId = response.data.results[0].id
           }
@@ -260,15 +288,17 @@ export default {
 
         if (webhookConfigId) {
           // 更新现有配置 - 需要先获取现有配置，然后更新webhook_bots
-          const configResponse = await axios.get(`/api/api-testing/notification-configs/${webhookConfigId}/`)
-          const existingConfig = configResponse.data
+          const configResponse = await getUnifiedNotificationConfigs({ config_type: configType })
+          const existingConfig = configResponse.data.results[0]
 
           // 合并现有的webhook_bots和其他字段
           const updatedWebhookBots = existingConfig.webhook_bots || {}
           const botData = {
             name: botConfig.name || `${botType}机器人`,
             webhook_url: botConfig.webhook_url,
-            enabled: botConfig.enabled
+            enabled: botConfig.enabled,
+            enable_ui_automation: botConfig.enable_ui_automation,
+            enable_api_testing: botConfig.enable_api_testing
           }
 
           // 钉钉机器人需要额外保存secret字段
@@ -286,14 +316,16 @@ export default {
           }
 
           // 更新现有配置
-          await axios.patch(`/api/api-testing/notification-configs/${webhookConfigId}/`, requestData)
+          await updateUnifiedNotificationConfig(webhookConfigId, requestData)
           ElMessage.success(`${botType === 'feishu' ? '飞书' : botType === 'wechat' ? '企微' : '钉钉'}机器人配置更新成功`)
         } else {
           // 创建新配置
           const botData = {
             name: botConfig.name || `${botType}机器人`,
             webhook_url: botConfig.webhook_url,
-            enabled: botConfig.enabled
+            enabled: botConfig.enabled,
+            enable_ui_automation: botConfig.enable_ui_automation,
+            enable_api_testing: botConfig.enable_api_testing
           }
 
           // 钉钉机器人需要额外保存secret字段
@@ -310,7 +342,7 @@ export default {
             is_active: true
           }
 
-          await axios.post('/api/api-testing/notification-configs/', requestData)
+          await createUnifiedNotificationConfig(requestData)
           ElMessage.success(`${botType === 'feishu' ? '飞书' : botType === 'wechat' ? '企微' : '钉钉'}机器人配置创建成功`)
         }
 
@@ -326,7 +358,7 @@ export default {
     const fetchWebhookConfig = async (botType) => {
       try {
         const configType = getConfigType(botType)
-        const response = await axios.get(`/api/api-testing/notification-configs/?config_type=${configType}`)
+        const response = await getUnifiedNotificationConfigs({ config_type: configType })
         if (response.data.results && response.data.results.length > 0) {
           const config = response.data.results[0]
           if (config.webhook_bots && config.webhook_bots[botType]) {
@@ -334,6 +366,8 @@ export default {
             webhookBots[botType].name = bot.name || ''
             webhookBots[botType].webhook_url = bot.webhook_url || ''
             webhookBots[botType].enabled = bot.enabled !== false
+            webhookBots[botType].enable_ui_automation = bot.enable_ui_automation !== false
+            webhookBots[botType].enable_api_testing = bot.enable_api_testing !== false
             // 钉钉机器人需要额外读取secret字段
             if (botType === 'dingtalk' && bot.secret) {
               webhookBots[botType].secret = bot.secret

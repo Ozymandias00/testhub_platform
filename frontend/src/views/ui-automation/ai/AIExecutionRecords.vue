@@ -1,20 +1,17 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h1 class="page-title">AI 执行记录</h1>
+      <h1 class="page-title">AI 测试报告</h1>
       <div class="header-actions">
-        <el-button 
-          type="danger" 
-          :disabled="selectedRecords.length === 0" 
+        <el-button
+          type="danger"
+          :disabled="selectedRecords.length === 0"
           @click="batchDeleteRecords"
           :loading="isDeleting"
         >
           <el-icon><Delete /></el-icon>
           批量删除
         </el-button>
-        <el-select v-model="projectId" placeholder="选择项目" style="width: 200px; margin-left: 15px" @change="onProjectChange">
-          <el-option v-for="project in projects" :key="project.id" :label="project.name" :value="project.id" />
-        </el-select>
       </div>
     </div>
 
@@ -133,11 +130,9 @@
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
-import { getUiProjects, getAIExecutionRecords, batchDeleteAIExecutionRecords } from '@/api/ui_automation'
+import { getAIExecutionRecords, batchDeleteAIExecutionRecords } from '@/api/ui_automation'
 import AIExecutionReport from './AIExecutionReport.vue'
 
-const projects = ref([])
-const projectId = ref('')
 const records = ref([])
 const loading = ref(false)
 const total = ref(0)
@@ -158,39 +153,15 @@ const tableRef = ref(null)
 const showReportDialog = ref(false)
 const reportRecordId = ref(null)
 
-// 加载项目列表
-const loadProjects = async () => {
-  try {
-    const response = await getUiProjects({ page_size: 100 })
-    projects.value = response.data.results || response.data
-    if (projects.value.length > 0) {
-      projectId.value = projects.value[0].id
-      loadRecords()
-      startPolling()
-    }
-  } catch (error) {
-    console.error('获取项目列表失败:', error)
-    ElMessage.error('获取项目列表失败')
-  }
-}
-
-const onProjectChange = () => {
-  pagination.currentPage = 1
-  loadRecords()
-}
-
 // 加载记录列表
 const loadRecords = async () => {
-  if (!projectId.value) return
-  
   loading.value = true
   try {
     const response = await getAIExecutionRecords({
-      project: projectId.value,
       page: pagination.currentPage,
       page_size: pagination.pageSize
     })
-    
+
     records.value = response.data.results || []
     total.value = response.data.count || 0
     // 清空选择
@@ -320,7 +291,6 @@ const startPolling = () => {
 
       // 静默刷新，不显示 loading
       getAIExecutionRecords({
-        project: projectId.value,
         page: 1,
         page_size: pagination.pageSize
       }).then(response => {
@@ -335,7 +305,8 @@ const startPolling = () => {
 }
 
 onMounted(() => {
-  loadProjects()
+  loadRecords()
+  startPolling()
 })
 
 onUnmounted(() => {

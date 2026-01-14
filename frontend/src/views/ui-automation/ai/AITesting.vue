@@ -2,9 +2,6 @@
   <div class="page-container">
     <div class="page-header">
       <h1 class="page-title">AI 智能测试</h1>
-      <el-select v-model="projectId" placeholder="选择项目" style="width: 200px; margin-right: 15px" @change="onProjectChange">
-        <el-option v-for="project in projects" :key="project.id" :label="project.name" :value="project.id" />
-      </el-select>
     </div>
 
     <div class="card-container">
@@ -35,28 +32,28 @@
             </el-form-item>
 
             <el-form-item>
-              <el-button 
-                type="primary" 
-                @click="handleRun" 
+              <el-button
+                type="primary"
+                @click="handleRun"
                 :loading="running"
-                :disabled="!taskForm.description || !projectId"
+                :disabled="!taskForm.description"
               >
                 <el-icon><VideoPlay /></el-icon>
                 开始执行
               </el-button>
-              <el-button 
-                type="danger" 
-                @click="handleStop" 
+              <el-button
+                type="danger"
+                @click="handleStop"
                 :disabled="!running || analyzing"
                 v-if="running"
               >
                 <el-icon><SwitchButton /></el-icon>
                 停止执行
               </el-button>
-              <el-button 
-                type="success" 
-                @click="handleSaveAsCase" 
-                :disabled="!taskForm.description || !projectId"
+              <el-button
+                type="success"
+                @click="handleSaveAsCase"
+                :disabled="!taskForm.description"
               >
                 <el-icon><DocumentAdd /></el-icon>
                 保存为用例
@@ -71,8 +68,8 @@
             style="margin-top: 20px;"
           >
             <template #default>
-              <div>AI 模式使用 SiliconFlow 的 DeepSeek V3.2 模型，支持中英文任务描述。</div>
-              <div>任务描述越详细，执行效果越好。</div>
+              <div>AI 模式使用"配置中心-AI智能模式配置"中的模型（如未添加模型，请前往添加）。</div>
+              <div>支持中英文任务描述，任务描述越详细，执行效果越好。</div>
             </template>
           </el-alert>
           
@@ -139,19 +136,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { VideoPlay, DocumentAdd, CircleCheckFilled, CircleCheck, Loading, SwitchButton } from '@element-plus/icons-vue'
-import { 
-  getUiProjects, 
-  runAdhocAITask, 
+import {
+  runAdhocAITask,
   createAICase,
   getAIExecutionRecordDetail,
   stopAITask
 } from '@/api/ui_automation'
 
-const projects = ref([])
-const projectId = ref('')
 const running = ref(false)
 const analyzing = ref(false)
 const saving = ref(false)
@@ -176,31 +170,8 @@ const saveRules = {
   name: [{ required: true, message: '请输入用例名称', trigger: 'blur' }]
 }
 
-// 加载项目列表
-const loadProjects = async () => {
-  try {
-    const response = await getUiProjects({ page_size: 100 })
-    projects.value = response.data.results || response.data
-    if (projects.value.length > 0) {
-      projectId.value = projects.value[0].id
-    }
-  } catch (error) {
-    console.error('获取项目列表失败:', error)
-    ElMessage.error('获取项目列表失败')
-  }
-}
-
-const onProjectChange = () => {
-  // 项目切换逻辑
-}
-
 // 执行任务
 const handleRun = async () => {
-  if (!projectId.value) {
-    ElMessage.warning('请先选择项目')
-    return
-  }
-  
   running.value = true
   analyzing.value = true
   logs.value = '正在初始化 AI Agent...\n'
@@ -208,7 +179,6 @@ const handleRun = async () => {
 
   try {
     const response = await runAdhocAITask({
-      project_id: projectId.value,
       task_description: taskForm.description,
       execution_mode: 'text',  // 始终使用文本模式
       enable_gif: taskForm.enableGif  // 传递GIF录制开关状态
@@ -299,18 +269,17 @@ const handleSaveAsCase = () => {
 
 const confirmSaveCase = async () => {
   if (!saveFormRef.value) return
-  
+
   await saveFormRef.value.validate(async (valid) => {
     if (valid) {
       saving.value = true
       try {
         await createAICase({
-          project_id: projectId.value,
           name: saveForm.name,
           description: saveForm.description,
           task_description: taskForm.description
         })
-        
+
         ElMessage.success('保存成功')
         showSaveDialog.value = false
       } catch (error) {
@@ -322,10 +291,6 @@ const confirmSaveCase = async () => {
     }
   })
 }
-
-onMounted(() => {
-  loadProjects()
-})
 </script>
 
 <style lang="scss" scoped>

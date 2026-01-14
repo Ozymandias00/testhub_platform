@@ -1,10 +1,21 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from datetime import datetime
+
+
+class NullableDateField(serializers.DateField):
+    """允许空字符串的日期字段"""
+    def to_internal_value(self, value):
+        # 如果是空字符串，返回 None
+        if value == '' or value is None:
+            return None
+        # 否则使用父类的正常处理
+        return super().to_internal_value(value)
 from .models import (
     ApiProject, ApiCollection, ApiRequest, Environment,
     RequestHistory, TestSuite, TestExecution, TestSuiteRequest,
-    ScheduledTask, TaskExecutionLog, NotificationConfig, NotificationLog,
+    ScheduledTask, TaskExecutionLog, NotificationLog,
     TaskNotificationSetting, OperationLog,
 )
 
@@ -21,6 +32,8 @@ class ApiProjectSerializer(serializers.ModelSerializer):
     owner = UserSerializer(read_only=True)
     members = UserSerializer(many=True, read_only=True)
     member_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
+    start_date = NullableDateField(required=False, allow_null=True)
+    end_date = NullableDateField(required=False, allow_null=True)
 
     class Meta:
         model = ApiProject
@@ -30,6 +43,14 @@ class ApiProjectSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
+
+    def validate(self, attrs):
+        # 将空字符串转换为 None
+        if 'start_date' in attrs and attrs['start_date'] == '':
+            attrs['start_date'] = None
+        if 'end_date' in attrs and attrs['end_date'] == '':
+            attrs['end_date'] = None
+        return attrs
 
     def create(self, validated_data):
         member_ids = validated_data.pop('member_ids', [])
@@ -289,19 +310,20 @@ class ScheduledTaskSerializer(serializers.ModelSerializer):
 
         try:
             # 根据通知类型选择合适的通知配置
+            from apps.core.models import UnifiedNotificationConfig
             notification_config = None
             if notification_type in ['webhook', 'both']:
                 # 如果需要Webhook通知，优先选择Webhook配置
-                notification_config = NotificationConfig.objects.filter(
+                notification_config = UnifiedNotificationConfig.objects.filter(
                     config_type__in=['webhook_wechat', 'webhook_feishu', 'webhook_dingtalk'],
                     is_active=True
                 ).first()
                 if not notification_config:
                     logger.warning("没有找到可用的Webhook通知配置，使用默认邮件配置")
-                    notification_config = NotificationConfig.objects.filter(is_default=True, is_active=True).first()
+                    notification_config = UnifiedNotificationConfig.objects.filter(is_default=True, is_active=True).first()
             else:
                 # 邮件通知使用默认配置
-                notification_config = NotificationConfig.objects.filter(is_default=True, is_active=True).first()
+                notification_config = UnifiedNotificationConfig.objects.filter(is_default=True, is_active=True).first()
 
             logger.info(f"选择的通知配置: {notification_config.name if notification_config else 'None'}")
 
@@ -347,22 +369,23 @@ class ScheduledTaskSerializer(serializers.ModelSerializer):
 
         # 更新通知设置
         if notification_type is not None:
-            from .models import TaskNotificationSetting, NotificationConfig
+            from .models import TaskNotificationSetting
+            from apps.core.models import UnifiedNotificationConfig
             try:
                 # 根据通知类型选择合适的通知配置
                 notification_config = None
                 if notification_type in ['webhook', 'both']:
                     # 如果需要Webhook通知，优先选择Webhook配置
-                    notification_config = NotificationConfig.objects.filter(
+                    notification_config = UnifiedNotificationConfig.objects.filter(
                         config_type__in=['webhook_wechat', 'webhook_feishu', 'webhook_dingtalk'],
                         is_active=True
                     ).first()
                     if not notification_config:
                         logger.warning("没有找到可用的Webhook通知配置，使用默认邮件配置")
-                        notification_config = NotificationConfig.objects.filter(is_default=True, is_active=True).first()
+                        notification_config = UnifiedNotificationConfig.objects.filter(is_default=True, is_active=True).first()
                 else:
                     # 邮件通知使用默认配置
-                    notification_config = NotificationConfig.objects.filter(is_default=True, is_active=True).first()
+                    notification_config = UnifiedNotificationConfig.objects.filter(is_default=True, is_active=True).first()
 
                 logger.info(f"选择的通知配置: {notification_config.name if notification_config else 'None'}")
 
@@ -415,27 +438,6 @@ class TaskExecutionLogSerializer(serializers.ModelSerializer):
 
 # ================ 通知管理序列化器 ================
 
-class NotificationConfigSerializer(serializers.ModelSerializer):
-    """通知配置序列化器"""
-    webhook_bots_display = serializers.SerializerMethodField()
-
-    class Meta:
-        model = NotificationConfig
-        fields = ['id', 'name', 'config_type', 'webhook_bots', 'is_default', 'created_at', 'webhook_bots_display',
-                  'created_by', 'is_active']
-        read_only_fields = ['created_at', 'created_by', 'webhook_bots_display']
-
-    def get_webhook_bots_display(self, obj):
-        """获取webhook机器人显示信息"""
-        bots = obj.get_webhook_bots()
-        return f"{len(bots)} 个机器人配置" if bots else "未配置"
-
-    def create(self, validated_data):
-        """创建时自动设置创建者"""
-        validated_data['created_by'] = self.context['request'].user
-        instance = super().create(validated_data)
-        return instance
-
 
 class NotificationLogSerializer(serializers.ModelSerializer):
     """通知日志序列化器"""
@@ -473,10 +475,15 @@ class NotificationLogSerializer(serializers.ModelSerializer):
         return obj.get_notification_type_display()
 
     def get_task_type_display(self, obj):
-        """获取任务类型显示"""
-        if obj.task:
-            return obj.task.get_task_type_display()
-        return "未知任务类型"
+        """获取任务类型显示 - 使用保存的快照值"""
+        if obj.task_type:
+            # 使用保存的任务类型快照
+            for choice_value, choice_label in ScheduledTask.TASK_TYPE_CHOICES:
+                if choice_value == obj.task_type:
+                    return choice_label
+            return obj.task_type
+        # 如果 task_type 为空，返回未记录，不要从 task 对象获取（避免显示修改后的值）
+        return "未记录"
 
     def get_retry_status(self, obj):
         """获取重试状态"""
@@ -546,22 +553,6 @@ class TaskNotificationSettingSerializer(serializers.ModelSerializer):
         return ', '.join(type_names) if type_names else "无"
 
 
-class NotificationConfigDetailSerializer(serializers.ModelSerializer):
-    """通知配置详情序列化器"""
-    webhook_bots = serializers.SerializerMethodField()
-
-    class Meta:
-        model = NotificationConfig
-        fields = ['id', 'name', 'config_type', 'is_default',
-                  'is_active', 'webhook_bots',
-                  'created_at', 'updated_at', 'created_by']
-        read_only_fields = ['created_at', 'updated_at', 'created_by']
-
-    def get_webhook_bots(self, obj):
-        """获取webhook机器人列表"""
-        return obj.get_webhook_bots()
-
-
 class NotificationLogDetailSerializer(serializers.ModelSerializer):
     """通知日志详情序列化器"""
     notification_type_display = serializers.SerializerMethodField()
@@ -596,10 +587,15 @@ class NotificationLogDetailSerializer(serializers.ModelSerializer):
         return obj.get_status_display()
 
     def get_task_type_display(self, obj):
-        """获取任务类型显示"""
-        if obj.task:
-            return obj.task.get_task_type_display()
-        return "未知任务类型"
+        """获取任务类型显示 - 使用保存的快照值"""
+        if obj.task_type:
+            # 使用保存的任务类型快照
+            for choice_value, choice_label in ScheduledTask.TASK_TYPE_CHOICES:
+                if choice_value == obj.task_type:
+                    return choice_label
+            return obj.task_type
+        # 如果 task_type 为空，返回未记录，不要从 task 对象获取（避免显示修改后的值）
+        return "未记录"
 
     def get_formatted_recipients(self, obj):
         """获取格式化的收件人信息"""
